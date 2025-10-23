@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:mongo_dart/mongo_dart.dart' as mongo;
-import 'mongo_connection.dart';
-import 'crypto_utils.dart';
-import 'notificaciones.dart';
+import './db/mongo_connection.dart';
+import './utils/crypto_utils.dart';
+
 
 class EditarClientePage extends StatefulWidget {
   final Map<String, dynamic> cliente;

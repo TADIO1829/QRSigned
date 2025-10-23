@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:mongo_dart/mongo_dart.dart' as mongo;
 import 'package:path/path.dart' as p;
 import 'mongo_connection.dart';
-import 'crypto_utils.dart';
+import './utils/crypto_utils.dart';
 import 'cliente_global.dart';
 import 'mainmenu.dart';
 import 'editar_cliente_page.dart';

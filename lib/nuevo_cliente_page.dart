@@ -3,7 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:mongo_dart/mongo_dart.dart' as mongo;
 import 'mongo_connection.dart';
-import 'crypto_utils.dart';
+import './utils/crypto_utils.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:path/path.dart' as p;
 import 'package:overlay_support/overlay_support.dart';

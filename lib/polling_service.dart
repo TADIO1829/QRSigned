@@ -3,15 +3,13 @@ import 'dart:async';
 import 'package:mongo_dart/mongo_dart.dart' as mongo;
 import 'mongo_connection.dart';
 import 'notificaciones.dart';
-import 'crypto_utils.dart'; // para desencriptar cédula
+import './utils/crypto_utils.dart'; 
 
 class PollingService {
   static Timer? _timer;
   static DateTime? _lastCheck;
 
-  /// Inicia el polling cada [interval] segundos
   static void startPolling({int interval = 10}) {
-    // Empieza revisando los cambios recientes (última hora)
     _lastCheck = DateTime.now().subtract(Duration(hours: 1));
 
     _timer?.cancel();
@@ -22,14 +20,13 @@ class PollingService {
     print("🟢 Polling iniciado (intervalo: ${interval}s)");
   }
 
-  /// Detiene el polling
   static void stopPolling() {
     _timer?.cancel();
     _timer = null;
     print("🔴 Polling detenido");
   }
 
-  /// Verifica si hay siniestros actualizados desde la última revisión
+  
   static Future<void> _checkForUpdates() async {
     try {
       final db = await MongoDatabase.connect();

@@ -1,21 +1,19 @@
 import 'package:flutter/material.dart';
-import 'nuevo_cliente_page.dart';
 import 'ver_clientes_page.dart';
+import 'ver_siniestros_page.dart';
+import 'nuevo_siniestro_page.dart'; // 🔹 Import necesario
 import 'cliente_global.dart';
 import './utils/crypto_utils.dart';
-import 'editar_cliente_page.dart';
-import 'nuevo_siniestro_page.dart';
-import 'ver_siniestros_page.dart';
 import 'polling_service.dart';
 
-class MainMenuPage extends StatefulWidget {
-  const MainMenuPage({super.key});
+class MainMenuUserPage extends StatefulWidget {
+  const MainMenuUserPage({super.key});
 
   @override
-  State<MainMenuPage> createState() => _MainMenuPageState();
+  State<MainMenuUserPage> createState() => _MainMenuUserPageState();
 }
 
-class _MainMenuPageState extends State<MainMenuPage> {
+class _MainMenuUserPageState extends State<MainMenuUserPage> {
   bool showClientesMenu = false;
   bool showSiniestrosMenu = false;
   String? clienteActivo;
@@ -49,14 +47,13 @@ class _MainMenuPageState extends State<MainMenuPage> {
 
   @override
   Widget build(BuildContext context) {
-    // 🎨 Colores originales
     const fondo = Color(0xFF23272F);
     const azulClaro = Color(0xFF4D82BC);
 
     return Scaffold(
       backgroundColor: fondo,
       appBar: AppBar(
-        title: const Text('Menú Principal | QRSIGNED'),
+        title: const Text('Menú Usuario | QRSIGNED'),
         backgroundColor: azulClaro,
         foregroundColor: Colors.white,
         elevation: 0,
@@ -87,7 +84,7 @@ class _MainMenuPageState extends State<MainMenuPage> {
               ),
               const SizedBox(height: 8),
               Text(
-                'Menú principal',
+                'Menú de Usuario',
                 style: TextStyle(
                   fontSize: 26,
                   fontWeight: FontWeight.bold,
@@ -96,7 +93,7 @@ class _MainMenuPageState extends State<MainMenuPage> {
               ),
               const SizedBox(height: 22),
 
-              // === Botón Clientes ===
+              // === CLIENTES ===
               menuButton(
                 context,
                 "Clientes",
@@ -109,12 +106,6 @@ class _MainMenuPageState extends State<MainMenuPage> {
               ),
 
               if (showClientesMenu) ...[
-                subMenuButton(context, "Nuevo Cliente", Icons.person_add, azulClaro, () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const NuevoClientePage()),
-                  );
-                }),
                 subMenuButton(context, "Ver Clientes", Icons.people, azulClaro, () async {
                   await Navigator.push(
                     context,
@@ -122,67 +113,9 @@ class _MainMenuPageState extends State<MainMenuPage> {
                   );
                   _actualizarClienteDesdeGlobal();
                 }),
-                subMenuButton(context, "Editar Cliente", Icons.edit, azulClaro, () async {
-                  if (ClienteGlobal.seleccionado != null) {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => EditarClientePage(
-                          cliente: ClienteGlobal.seleccionado!,
-                        ),
-                      ),
-                    );
-                  } else {
-                    final seleccionado = await Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const VerClientesPage(seleccionarParaEditar: true),
-                      ),
-                    );
-
-                    if (seleccionado != null && seleccionado is Map<String, dynamic>) {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => EditarClientePage(cliente: seleccionado),
-                        ),
-                      );
-                    }
-                  }
-                }),
-                subMenuButton(context, "Trasladar Póliza", Icons.sync_alt, azulClaro, () async {
-                  if (ClienteGlobal.seleccionado != null) {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => NuevoClientePage(
-                          trasladarPolizaDesde: ClienteGlobal.seleccionado,
-                        ),
-                      ),
-                    );
-                  } else {
-                    final seleccionado = await Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const VerClientesPage(seleccionarParaEditar: true),
-                      ),
-                    );
-
-                    if (seleccionado != null && seleccionado is Map<String, dynamic>) {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => NuevoClientePage(
-                            trasladarPolizaDesde: seleccionado,
-                          ),
-                        ),
-                      );
-                    }
-                  }
-                }),
               ],
 
-              // === Botón Siniestros ===
+              // === SINIESTROS ===
               menuButton(
                 context,
                 "Siniestros",
@@ -195,23 +128,35 @@ class _MainMenuPageState extends State<MainMenuPage> {
               ),
 
               if (showSiniestrosMenu) ...[
-                subMenuButton(context, "Nuevo Siniestro", Icons.note_add, azulClaro, () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const NuevoSiniestroPage()),
-                  );
-                }),
-                subMenuButton(context, "Ver Siniestros", Icons.list_alt, azulClaro, () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const VerSiniestrosPage()),
-                  );
-                }),
+                subMenuButton(
+                  context,
+                  "Nuevo Siniestro",
+                  Icons.note_add,
+                  azulClaro,
+                  () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const NuevoSiniestroPage()),
+                    );
+                  },
+                ),
+                subMenuButton(
+                  context,
+                  "Ver Siniestros",
+                  Icons.list_alt,
+                  azulClaro,
+                  () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const VerSiniestrosPage()),
+                    );
+                  },
+                ),
               ],
 
               const SizedBox(height: 25),
 
-              // === Cliente Activo ===
+              // === CLIENTE ACTIVO ===
               Row(
                 children: [
                   Icon(Icons.verified_user, color: azulClaro),
@@ -247,7 +192,7 @@ class _MainMenuPageState extends State<MainMenuPage> {
     );
   }
 
-  // === Botón principal ===
+  // === BOTÓN PRINCIPAL ===
   Widget menuButton(
       BuildContext context, String label, bool expanded, VoidCallback onTap, Color azulClaro) {
     return AnimatedContainer(
@@ -301,7 +246,7 @@ class _MainMenuPageState extends State<MainMenuPage> {
     );
   }
 
-  // === Submenús ===
+  // === SUBMENÚ ===
   Widget subMenuButton(
       BuildContext context, String label, IconData icon, Color azulClaro, VoidCallback onTap) {
     return Container(

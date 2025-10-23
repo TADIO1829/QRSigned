@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'cliente_global.dart';
-import 'crypto_utils.dart';
+import './utils/crypto_utils.dart';
 import 'mongo_connection.dart';
 import 'nuevo_cliente_page.dart';
 import 'ver_clientes_page.dart';

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'mainmenu.dart';
+import 'mainmenu_user.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -20,17 +21,19 @@ class _LoginPageState extends State<LoginPage> {
       error = '';
     });
 
-    await Future.delayed(const Duration(milliseconds: 500));
+    // Pequeño retardo para UX
+    await Future.delayed(const Duration(milliseconds: 400));
 
-    final email = userController.text.trim();
+    final email = userController.text.trim().toLowerCase();
     final password = passController.text.trim();
 
-    if (email == "admin@admin.com" && password == "123456") {
-      showDialog(
+    // 🔹 Credenciales de administrador
+    if (email == "admin@admin.com" && password == "made") {
+      await showDialog(
         context: context,
         builder: (_) => AlertDialog(
-          title: const Text("¡Bienvenido!"),
-          content: Text('Usuario: $email'),
+          title: const Text("¡Bienvenido Admin!"),
+          content: Text('Usuario administrador: Esthefany'),
           actions: [
             TextButton(
               onPressed: () {
@@ -45,7 +48,33 @@ class _LoginPageState extends State<LoginPage> {
           ],
         ),
       );
-    } else {
+    }
+
+    // 🔹 Credenciales de usuario normal
+    else if (email == "usuario@gmail.com" && password == "made") {
+      await showDialog(
+        context: context,
+        builder: (_) => AlertDialog(
+          title: const Text("¡Bienvenido Usuario!"),
+          content: Text('Acceso como usuario estándar: Tadeo'),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (_) => const MainMenuUserPage()),
+                );
+              },
+              child: const Text("OK"),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // ❌ Credenciales incorrectas
+    else {
       setState(() => error = 'Usuario o contraseña incorrectos');
     }
 
@@ -54,7 +83,6 @@ class _LoginPageState extends State<LoginPage> {
 
   @override
   Widget build(BuildContext context) {
-    // 🎨 Paleta original (exactamente igual)
     const fondo = Color(0xFF23272F);
     const azulClaro = Color(0xFF4D82BC);
 
@@ -68,13 +96,16 @@ class _LoginPageState extends State<LoginPage> {
             color: Colors.white.withOpacity(0.96),
             borderRadius: BorderRadius.circular(18),
             boxShadow: [
-              BoxShadow(color: Colors.black26, blurRadius: 18, offset: const Offset(0, 6)),
+              BoxShadow(
+                color: Colors.black26,
+                blurRadius: 18,
+                offset: const Offset(0, 6),
+              ),
             ],
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // 🔹 Nuevo ícono QR en lugar del candado
               const Icon(
                 Icons.qr_code_2,
                 size: 72,
@@ -94,12 +125,15 @@ class _LoginPageState extends State<LoginPage> {
 
               TextField(
                 controller: userController,
+                keyboardType: TextInputType.emailAddress,
                 decoration: InputDecoration(
                   labelText: "Email",
+                 
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  prefixIcon: const Icon(Icons.person_outline, color: azulClaro),
+                  prefixIcon:
+                      const Icon(Icons.person_outline, color: azulClaro),
                 ),
                 onSubmitted: (_) => _login(),
               ),
@@ -110,10 +144,12 @@ class _LoginPageState extends State<LoginPage> {
                 obscureText: true,
                 decoration: InputDecoration(
                   labelText: "Contraseña",
+                
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  prefixIcon: const Icon(Icons.lock_outline, color: azulClaro),
+                  prefixIcon:
+                      const Icon(Icons.lock_outline, color: azulClaro),
                 ),
                 onSubmitted: (_) => _login(),
               ),
@@ -122,7 +158,10 @@ class _LoginPageState extends State<LoginPage> {
               if (error.isNotEmpty)
                 Text(
                   error,
-                  style: const TextStyle(color: Colors.red, fontWeight: FontWeight.w500),
+                  style: const TextStyle(
+                    color: Colors.red,
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
 
               const SizedBox(height: 16),
@@ -141,7 +180,10 @@ class _LoginPageState extends State<LoginPage> {
                             borderRadius: BorderRadius.circular(10),
                           ),
                         ),
-                        onPressed: _login,
+                        onPressed: () async {
+                          FocusScope.of(context).unfocus(); // 🔹 Cierra teclado
+                          await _login();
+                        },
                         child: const Text(
                           "Entrar",
                           style: TextStyle(
