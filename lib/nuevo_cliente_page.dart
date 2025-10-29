@@ -31,7 +31,7 @@ class _NuevoClientePageState extends State<NuevoClientePage> {
   final cedulaController = TextEditingController();
   final direccionController = TextEditingController();
   final telefonoController = TextEditingController();
-  String? polizaSeleccionada = '';
+  String?  polizaSeleccionada = null;
  
   bool cedulaDuplicada = false;
   bool telefonoDuplicado = false;
@@ -331,11 +331,10 @@ class _NuevoClientePageState extends State<NuevoClientePage> {
       setState(() => error = "Selecciona una póliza.");
       return;
     }
-    if (preguntaSeguridadSeleccionada == null ||
-        (respuestaSeguridadController.text.trim().isEmpty)) {
-      setState(() => error = "Completa la pregunta de seguridad.");
-      return;
-    }
+    if (polizaSeleccionada == null) { 
+  setState(() => error = "Selecciona una póliza.");
+  return;
+}
     if (_hayDuplicados) {
       setState(() => error = "Corrige los duplicados antes de guardar.");
       return;
@@ -693,12 +692,12 @@ class _NuevoClientePageState extends State<NuevoClientePage> {
                   _card("Datos personales", [
                     _textLine(
                       nombreController,
-                      "Nombre",
+                      "Nombre Completo",
                       validator: _validaNombre,
                     ),
                     _textLine(
                       cedulaController,
-                      "Cédula",
+                      "Numero de Cédula",
                       validator: _validaCedula,
                       keyboard: TextInputType.number,
                       suffix: cedulaController.text.isEmpty
@@ -754,16 +753,16 @@ class _NuevoClientePageState extends State<NuevoClientePage> {
                         ),
                       ),
                     DropdownButtonFormField<String>(
-                      value:
-                          polizaSeleccionada!.isEmpty ? null : polizaSeleccionada,
+                      value: polizaSeleccionada!.isEmpty ? null : polizaSeleccionada,
                       items: const [
-                        DropdownMenuItem(value: "Básica", child: Text("Básica")),
-                        DropdownMenuItem(value: "Premium", child: Text("Premium")),
+                        DropdownMenuItem(value: null, child: Text("Selecciona una póliza")),
+                        DropdownMenuItem(value: "1", child: Text("1 año")),
+                        DropdownMenuItem(value: "3", child: Text("3 años")),
+                        DropdownMenuItem(value: "5", child: Text("5 años")),
                       ],
                       decoration: const InputDecoration(labelText: "Póliza"),
-                      validator: (v) =>
-                          (v == null || v.isEmpty) ? "Selecciona una póliza" : null,
-                      onChanged: (v) => setState(() => polizaSeleccionada = v ?? ""),
+                      validator: (v) => v == null ? "Selecciona una póliza" : null,
+                      onChanged: (v) => setState(() => polizaSeleccionada = v),
                     ),
                   ]),
 

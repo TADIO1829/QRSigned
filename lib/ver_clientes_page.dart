@@ -1,7 +1,6 @@
 import 'dart:io';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
-import 'package:mongo_dart/mongo_dart.dart' as mongo;
 import 'package:path/path.dart' as p;
 import 'mongo_connection.dart';
 import './utils/crypto_utils.dart';

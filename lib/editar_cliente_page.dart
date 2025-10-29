@@ -3,7 +3,6 @@ import 'package:mongo_dart/mongo_dart.dart' as mongo;
 import './db/mongo_connection.dart';
 import './utils/crypto_utils.dart';
 
-
 class EditarClientePage extends StatefulWidget {
   final Map<String, dynamic> cliente;
 
@@ -36,21 +35,61 @@ class _EditarClientePageState extends State<EditarClientePage> {
   List<TextEditingController> contactoTelefono = List.generate(3, (_) => TextEditingController());
   List<TextEditingController> contactoRelacion = List.generate(3, (_) => TextEditingController());
 
+
+  String safeDecrypt(String? text) {
+    if (text == null || text.isEmpty) return '';
+    try {
+      return CryptoUtils.decryptText(text);
+    } catch (_) {
+      return text;
+    }
+  }
+
+  String safeEncrypt(String text) {
+    if (text.isEmpty) return '';
+    try {
+      
+      CryptoUtils.decryptText(text);
+      return text;
+    } catch (_) {
+      return CryptoUtils.encryptText(text);
+    }
+  }
+
+  
+  String? _mapearPoliza(String? poliza) {
+    if (poliza == null) return null;
+    
+    if (poliza == "1" || poliza == "3" || poliza == "5") {
+      return "Básica";
+    }
+    
+   
+    if (poliza == "Básica" || poliza == "Premium") {
+      return poliza;
+    }
+    
+    return null; 
+  }
+
   @override
   void initState() {
     super.initState();
     final cli = widget.cliente;
+
     nombreController.text = cli['nombre'] ?? '';
-    cedulaController.text = CryptoUtils.decryptText(cli['cedula'] ?? '');
-    direccionController.text = CryptoUtils.decryptText(cli['direccion'] ?? '');
-    telefonoController.text = CryptoUtils.decryptText(cli['telefono'] ?? '');
-    polizaSeleccionada = cli['poliza'] ?? '';
+    cedulaController.text = safeDecrypt(cli['cedula']);
+    direccionController.text = safeDecrypt(cli['direccion']);
+    telefonoController.text = safeDecrypt(cli['telefono']);
+    
+    // Mapear el valor de la póliza
+    polizaSeleccionada = _mapearPoliza(cli['poliza']);
 
     // Vehículos
     final mats = (cli['matriculas'] as List?) ?? [];
     carrosControllers = mats.map((m) {
       return [
-        TextEditingController(text: CryptoUtils.decryptText(m['matricula'] ?? '')),
+        TextEditingController(text: safeDecrypt(m['matricula'] ?? '')),
         TextEditingController(text: m['color'] ?? ''),
         TextEditingController(text: m['marca'] ?? ''),
         TextEditingController(text: m['modelo'] ?? ''),
@@ -86,7 +125,7 @@ class _EditarClientePageState extends State<EditarClientePage> {
     for (int i = 0; i < 3; i++) {
       if (i < contactos.length) {
         contactoNombre[i].text = contactos[i]['nombre'] ?? '';
-        contactoTelefono[i].text = CryptoUtils.decryptText(contactos[i]['telefono'] ?? '');
+        contactoTelefono[i].text = safeDecrypt(contactos[i]['telefono']);
         contactoRelacion[i].text = contactos[i]['relacion'] ?? '';
       }
     }
@@ -104,9 +143,7 @@ class _EditarClientePageState extends State<EditarClientePage> {
     });
   }
 
-  void eliminarVehiculo(int i) {
-    setState(() => carrosControllers.removeAt(i));
-  }
+  void eliminarVehiculo(int i) => setState(() => carrosControllers.removeAt(i));
 
   void anadirMascota() {
     setState(() {
@@ -120,9 +157,7 @@ class _EditarClientePageState extends State<EditarClientePage> {
     });
   }
 
-  void eliminarMascota(int i) {
-    setState(() => mascotasControllers.removeAt(i));
-  }
+  void eliminarMascota(int i) => setState(() => mascotasControllers.removeAt(i));
 
   void anadirObjeto() {
     setState(() {
@@ -135,13 +170,11 @@ class _EditarClientePageState extends State<EditarClientePage> {
     });
   }
 
-  void eliminarObjeto(int i) {
-    setState(() => objetosControllers.removeAt(i));
-  }
+  void eliminarObjeto(int i) => setState(() => objetosControllers.removeAt(i));
 
   Future<void> _guardarCambios() async {
     if (!_formKey.currentState!.validate()) return;
-    if (polizaSeleccionada == null || polizaSeleccionada!.isEmpty) {
+    if (polizaSeleccionada == null) {
       setState(() => error = "Selecciona una póliza");
       return;
     }
@@ -150,12 +183,12 @@ class _EditarClientePageState extends State<EditarClientePage> {
 
     final clienteActualizado = {
       "nombre": nombreController.text.trim(),
-      "cedula": CryptoUtils.encryptText(cedulaController.text.trim()),
-      "direccion": CryptoUtils.encryptText(direccionController.text.trim()),
-      "telefono": CryptoUtils.encryptText(telefonoController.text.trim()),
+      "cedula": safeEncrypt(cedulaController.text.trim()),
+      "direccion": safeEncrypt(direccionController.text.trim()),
+      "telefono": safeEncrypt(telefonoController.text.trim()),
       "poliza": polizaSeleccionada,
       "matriculas": carrosControllers.map((f) => {
-        "matricula": CryptoUtils.encryptText(f[0].text.trim()),
+        "matricula": safeEncrypt(f[0].text.trim()),
         "color": f[1].text.trim(),
         "marca": f[2].text.trim(),
         "modelo": f[3].text.trim(),
@@ -176,7 +209,7 @@ class _EditarClientePageState extends State<EditarClientePage> {
       }).toList(),
       "contactos": List.generate(3, (i) => {
         "nombre": contactoNombre[i].text.trim(),
-        "telefono": CryptoUtils.encryptText(contactoTelefono[i].text.trim()),
+        "telefono": safeEncrypt(contactoTelefono[i].text.trim()),
         "relacion": contactoRelacion[i].text.trim(),
       }),
     };
@@ -186,15 +219,16 @@ class _EditarClientePageState extends State<EditarClientePage> {
       final col = db.collection('clientes');
       await col.updateOne(
         mongo.where.id(widget.cliente['_id']),
-        mongo.modify.set('nombre', clienteActualizado['nombre'])
-          .set('cedula', clienteActualizado['cedula'])
-          .set('direccion', clienteActualizado['direccion'])
-          .set('telefono', clienteActualizado['telefono'])
-          .set('poliza', clienteActualizado['poliza'])
-          .set('matriculas', clienteActualizado['matriculas'])
-          .set('mascotas', clienteActualizado['mascotas'])
-          .set('objetos', clienteActualizado['objetos'])
-          .set('contactos', clienteActualizado['contactos']),
+        mongo.modify
+            .set('nombre', clienteActualizado['nombre'])
+            .set('cedula', clienteActualizado['cedula'])
+            .set('direccion', clienteActualizado['direccion'])
+            .set('telefono', clienteActualizado['telefono'])
+            .set('poliza', clienteActualizado['poliza'])
+            .set('matriculas', clienteActualizado['matriculas'])
+            .set('mascotas', clienteActualizado['mascotas'])
+            .set('objetos', clienteActualizado['objetos'])
+            .set('contactos', clienteActualizado['contactos']),
       );
 
       if (context.mounted) {
@@ -216,7 +250,7 @@ class _EditarClientePageState extends State<EditarClientePage> {
         );
       }
     } catch (e) {
-      setState(() => error = "Error al actualizar cliente");
+      setState(() => error = "Error al actualizar cliente: $e");
     } finally {
       setState(() => loading = false);
     }
@@ -310,24 +344,28 @@ class _EditarClientePageState extends State<EditarClientePage> {
                       ),
                       const SizedBox(height: 20),
 
+                      // ==== DATOS PERSONALES ====
                       _card("Datos personales 👤", azulClaro, [
                         _input(nombreController, "Nombre"),
                         _input(cedulaController, "Cédula"),
                         _input(direccionController, "Dirección"),
                         _input(telefonoController, "Teléfono"),
                         DropdownButtonFormField<String>(
-                          value: polizaSeleccionada!.isEmpty ? null : polizaSeleccionada,
+                          value: polizaSeleccionada,
                           items: const [
+                            DropdownMenuItem(value: null, child: Text("Selecciona una póliza")),
                             DropdownMenuItem(value: "Básica", child: Text("Básica")),
                             DropdownMenuItem(value: "Premium", child: Text("Premium")),
                           ],
                           decoration: const InputDecoration(labelText: "Póliza"),
-                          onChanged: (v) => setState(() => polizaSeleccionada = v ?? ""),
+                          validator: (value) => value == null ? "Selecciona una póliza" : null,
+                          onChanged: (v) => setState(() => polizaSeleccionada = v),
                         ),
                       ]),
 
                       const SizedBox(height: 20),
 
+                      // ==== VEHÍCULOS ====
                       _card("Vehículos 🚗", azulClaro, [
                         ...List.generate(carrosControllers.length, (i) {
                           final c = carrosControllers[i];
@@ -366,6 +404,7 @@ class _EditarClientePageState extends State<EditarClientePage> {
 
                       const SizedBox(height: 20),
 
+                      // ==== MASCOTAS ====
                       _card("Mascotas 🐾", azulClaro, [
                         ...List.generate(mascotasControllers.length, (i) {
                           final m = mascotasControllers[i];
@@ -403,6 +442,7 @@ class _EditarClientePageState extends State<EditarClientePage> {
 
                       const SizedBox(height: 20),
 
+                      // ==== OBJETOS ====
                       _card("Objetos personales 📦", azulClaro, [
                         ...List.generate(objetosControllers.length, (i) {
                           final o = objetosControllers[i];
@@ -439,6 +479,7 @@ class _EditarClientePageState extends State<EditarClientePage> {
 
                       const SizedBox(height: 20),
 
+                      // ==== CONTACTOS ====
                       _card("Contactos alternativos ☎️", azulClaro, [
                         ...List.generate(3, (i) {
                           return Row(

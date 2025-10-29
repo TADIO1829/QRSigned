@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'ver_clientes_page.dart';
 import 'ver_siniestros_page.dart';
-import 'nuevo_siniestro_page.dart'; // 🔹 Import necesario
+import 'nuevo_siniestro_page.dart'; 
 import 'cliente_global.dart';
 import './utils/crypto_utils.dart';
 import 'polling_service.dart';
