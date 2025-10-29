@@ -37,6 +37,16 @@ class _VerClientesPageState extends State<VerClientesPage> {
   static const String _kBaseLocal = r'C:\imagenesclientes';
   static const String _kBaseLegacy = r'\\DARKSOUL\imagenes_clientes';
 
+  // Función segura para desencriptar
+  String safeDecrypt(String? text) {
+    if (text == null || text.isEmpty) return '';
+    try {
+      return CryptoUtils.decryptText(text);
+    } catch (_) {
+      return text ?? '';
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -72,8 +82,7 @@ class _VerClientesPageState extends State<VerClientesPage> {
       } else {
         filtrados = clientes.where((c) {
           final nombre = c['nombre']?.toString().toLowerCase() ?? '';
-          final cedula =
-              CryptoUtils.decryptText(c['cedula'] ?? '').toLowerCase();
+          final cedula = safeDecrypt(c['cedula']).toLowerCase();
           return nombre.contains(filtro) || cedula.contains(filtro);
         }).toList();
       }
@@ -255,8 +264,7 @@ class _VerClientesPageState extends State<VerClientesPage> {
                                           const Divider(height: 1),
                                       itemBuilder: (context, idx) {
                                         final cli = filtrados[idx];
-                                        final cedula =
-                                            CryptoUtils.decryptText(cli['cedula'] ?? '');
+                                        final cedula = safeDecrypt(cli['cedula']);
                                         final sel = seleccionado == idx;
                                         return Material(
                                           color: sel
@@ -264,14 +272,18 @@ class _VerClientesPageState extends State<VerClientesPage> {
                                               : Colors.transparent,
                                           child: ListTile(
                                             dense: true,
-                                            title: Text(cli['nombre'] ?? '',
-                                                style: const TextStyle(
-                                                    fontSize: 15,
-                                                    fontWeight: FontWeight.w500)),
-                                            subtitle: Text(cedula,
-                                                style: const TextStyle(
-                                                    fontSize: 13,
-                                                    color: Colors.grey)),
+                                            title: Text(
+                                              cli['nombre']?.toString() ?? 'Sin nombre',
+                                              style: const TextStyle(
+                                                  fontSize: 15,
+                                                  fontWeight: FontWeight.w500),
+                                            ),
+                                            subtitle: Text(
+                                              cedula.isEmpty ? "Sin cédula" : cedula,
+                                              style: const TextStyle(
+                                                  fontSize: 13,
+                                                  color: Colors.grey),
+                                            ),
                                             onTap: () {
                                               setState(() {
                                                 seleccionado = idx;
@@ -289,7 +301,8 @@ class _VerClientesPageState extends State<VerClientesPage> {
                     ),
                   ],
                 ),
-              ),              const SizedBox(width: 20),
+              ),
+              const SizedBox(width: 20),
               // ---------- PANEL DERECHO ----------
               Expanded(
                 child: Container(
@@ -414,30 +427,25 @@ class _VerClientesPageState extends State<VerClientesPage> {
   Widget _detalleCliente(Map<String, dynamic> cliente) {
     final List mats = cliente['matriculas'] ?? [];
     final List contactos = cliente['contactos'] ?? [];
-final List objetos = (cliente['objetosOMascotas'] ??
-        cliente['mascotas'] ??
-        cliente['objetos'] ??
-        [])
-    .whereType<Map<String, dynamic>>()
-    .toList();
-
+    final List mascotas = cliente['mascotas'] ?? [];
+    final List objetos = cliente['objetos'] ?? [];
 
     final ruta1 = _resolveImgPath((cliente['imagenCliente1'] ?? '').toString());
     final ruta2 = _resolveImgPath((cliente['imagenCliente2'] ?? '').toString());
 
-    final cedula = CryptoUtils.decryptText(cliente['cedula'] ?? '');
-    final direccion = CryptoUtils.decryptText(cliente['direccion'] ?? '');
-    final telefono = CryptoUtils.decryptText(cliente['telefono'] ?? '');
+    final cedula = safeDecrypt(cliente['cedula']);
+    final direccion = safeDecrypt(cliente['direccion']);
+    final telefono = safeDecrypt(cliente['telefono']);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _titulo("Datos personales"),
-        _row("Nombre:", Text(cliente['nombre'] ?? '')),
-        _row("Cédula:", _BlurRevealText(cedula)),
-        _row("Dirección:", _BlurRevealText(direccion)),
-        _row("Teléfono:", _BlurRevealText(telefono)),
-        _row("Póliza:", Text(cliente['poliza'] ?? '')),
+        _row("Nombre:", Text(cliente['nombre']?.toString() ?? '—')),
+        _row("Cédula:", _BlurRevealText(cedula.isEmpty ? "—" : cedula)),
+        _row("Dirección:", _BlurRevealText(direccion.isEmpty ? "—" : direccion)),
+        _row("Teléfono:", _BlurRevealText(telefono.isEmpty ? "—" : telefono)),
+        _row("Póliza:", Text(cliente['poliza']?.toString() ?? '—')),
         const SizedBox(height: 14),
 
         // ---------- IMÁGENES ----------
@@ -463,13 +471,13 @@ final List objetos = (cliente['objetosOMascotas'] ??
               )
             : Column(
                 children: mats.map((mat) {
-                  final placa = CryptoUtils.decryptText(mat['matricula'] ?? '');
+                  final placa = safeDecrypt(mat['matricula']);
                   return Padding(
                     padding: const EdgeInsets.only(left: 10, top: 4, bottom: 4),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _row("Matrícula:", _BlurRevealText(placa)),
+                        _row("Matrícula:", _BlurRevealText(placa.isEmpty ? "—" : placa)),
                         Text(
                           "${mat['marca'] ?? ''} ${mat['modelo'] ?? ''} • ${mat['color'] ?? ''} • ${mat['anio'] ?? ''}",
                           style: const TextStyle(fontSize: 14),
@@ -481,59 +489,58 @@ final List objetos = (cliente['objetosOMascotas'] ??
               ),
         const SizedBox(height: 14),
 
-        // ---------- OBJETOS Y MASCOTAS ----------
-        // === Mascotas ===
-_titulo("Mascotas"),
-(cliente['mascotas'] == null || (cliente['mascotas'] as List).isEmpty)
-    ? const Padding(
-        padding: EdgeInsets.only(left: 8, top: 5),
-        child: Text("— No hay mascotas registradas —"),
-      )
-    : Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: (cliente['mascotas'] as List).map((m) {
-          final nombre = m['nombre'] ?? '';
-          final tipo = m['tipo'] ?? '';
-          final raza = m['raza'] ?? '';
-          final color = m['color'] ?? '';
-          final descripcion = m['descripcion'] ?? '';
+        // ---------- MASCOTAS ----------
+        _titulo("Mascotas"),
+        mascotas.isEmpty
+            ? const Padding(
+                padding: EdgeInsets.only(left: 8, top: 5),
+                child: Text("— No hay mascotas registradas —"),
+              )
+            : Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: mascotas.map((m) {
+                  final nombre = m['nombre'] ?? '';
+                  final tipo = m['tipo'] ?? '';
+                  final raza = m['raza'] ?? '';
+                  final color = m['color'] ?? '';
+                  final descripcion = m['descripcion'] ?? '';
 
-          return Padding(
-            padding: const EdgeInsets.only(left: 10, top: 4, bottom: 4),
-            child: Text(
-              "🐾 $nombre ($tipo, $raza) - $color | $descripcion",
-              style: const TextStyle(fontSize: 14),
-            ),
-          );
-        }).toList(),
-      ),
+                  return Padding(
+                    padding: const EdgeInsets.only(left: 10, top: 4, bottom: 4),
+                    child: Text(
+                      "🐾 $nombre ($tipo, $raza) - $color | $descripcion",
+                      style: const TextStyle(fontSize: 14),
+                    ),
+                  );
+                }).toList(),
+              ),
 
-const SizedBox(height: 14),
+        const SizedBox(height: 14),
 
-// === Objetos personales ===
-_titulo("Objetos personales"),
-(cliente['objetos'] == null || (cliente['objetos'] as List).isEmpty)
-    ? const Padding(
-        padding: EdgeInsets.only(left: 8, top: 5),
-        child: Text("— No hay objetos registrados —"),
-      )
-    : Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: (cliente['objetos'] as List).map((o) {
-          final nombre = o['nombre'] ?? '';
-          final tipo = o['tipo'] ?? '';
-          final color = o['color'] ?? '';
-          final descripcion = o['descripcion'] ?? '';
+        // ==== OBJETOS PERSONALES ====
+        _titulo("Objetos personales"),
+        objetos.isEmpty
+            ? const Padding(
+                padding: EdgeInsets.only(left: 8, top: 5),
+                child: Text("— No hay objetos registrados —"),
+              )
+            : Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: objetos.map((o) {
+                  final nombre = o['nombre'] ?? '';
+                  final tipo = o['tipo'] ?? '';
+                  final color = o['color'] ?? '';
+                  final descripcion = o['descripcion'] ?? '';
 
-          return Padding(
-            padding: const EdgeInsets.only(left: 10, top: 4, bottom: 4),
-            child: Text(
-              "📦 $nombre ($tipo) - $color | $descripcion",
-              style: const TextStyle(fontSize: 14),
-            ),
-          );
-        }).toList(),
-      ),
+                  return Padding(
+                    padding: const EdgeInsets.only(left: 10, top: 4, bottom: 4),
+                    child: Text(
+                      "📦 $nombre ($tipo) - $color | $descripcion",
+                      style: const TextStyle(fontSize: 14),
+                    ),
+                  );
+                }).toList(),
+              ),
 
         const SizedBox(height: 14),
 
@@ -546,7 +553,7 @@ _titulo("Objetos personales"),
               )
             : Column(
                 children: contactos.map((c) {
-                  final tel = CryptoUtils.decryptText(c['telefono'] ?? '');
+                  final tel = safeDecrypt(c['telefono']);
                   return Padding(
                     padding: const EdgeInsets.only(left: 10, top: 4, bottom: 4),
                     child: Column(
@@ -556,7 +563,7 @@ _titulo("Objetos personales"),
                           "• ${c['nombre'] ?? ''} (${c['relacion'] ?? ''})",
                           style: const TextStyle(fontSize: 14),
                         ),
-                        _row("Teléfono:", _BlurRevealText(tel)),
+                        _row("Teléfono:", _BlurRevealText(tel.isEmpty ? "—" : tel)),
                       ],
                     ),
                   );
@@ -615,7 +622,7 @@ class _BlurRevealTextState extends State<_BlurRevealText> {
   @override
   Widget build(BuildContext context) {
     final contenido = Text(
-      widget.text.isEmpty ? "—" : widget.text,
+      widget.text,
       style: widget.style ??
           const TextStyle(fontSize: 14, color: Colors.black87),
       overflow: TextOverflow.fade,
@@ -645,4 +652,3 @@ class _BlurRevealTextState extends State<_BlurRevealText> {
     );
   }
 }
-

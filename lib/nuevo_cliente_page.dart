@@ -753,7 +753,7 @@ class _NuevoClientePageState extends State<NuevoClientePage> {
                         ),
                       ),
                     DropdownButtonFormField<String>(
-                      value: polizaSeleccionada!.isEmpty ? null : polizaSeleccionada,
+                      value: polizaSeleccionada,
                       items: const [
                         DropdownMenuItem(value: null, child: Text("Selecciona una póliza")),
                         DropdownMenuItem(value: "1", child: Text("1 año")),
