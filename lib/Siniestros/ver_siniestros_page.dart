@@ -38,7 +38,7 @@ class _VerSiniestrosPageState extends State<VerSiniestrosPage> {
     PollingService.startPolling();
   }
 
-  // ===================== HELPERS =====================
+  
 
   String _objetoIdHex(dynamic objId) {
     if (objId is mongo.ObjectId) return objId.oid;
@@ -127,8 +127,6 @@ class _VerSiniestrosPageState extends State<VerSiniestrosPage> {
     }
   }
 
-  // ===================== DATA =====================
-
   Future<void> cargarSiniestros() async {
     setState(() => loading = true);
     final db = await MongoDatabase.connect();
@@ -213,7 +211,7 @@ class _VerSiniestrosPageState extends State<VerSiniestrosPage> {
     );
   }
 
-  // ===================== UI HELPERS =====================
+
 
   String _fmtFecha(dynamic iso) {
     final s = iso?.toString() ?? '';
@@ -308,7 +306,7 @@ class _VerSiniestrosPageState extends State<VerSiniestrosPage> {
     builder: (context, objSnap) {
       final tipo = (objSnap.data?["tipo"] ?? "objeto").toString();
 
-      // 🔹 Lista dinámica de estados según tipo
+     
       final estadosQR = (tipo == "mascota")
           ? ['sin_novedad', 'perdida', 'encontrada']
           : ['en_uso', 'perdido', 'robado', 'en_venta', 'en_reparacion', 'prestado', 'encontrado'];
@@ -319,7 +317,7 @@ class _VerSiniestrosPageState extends State<VerSiniestrosPage> {
           final cargando = snap.connectionState == ConnectionState.waiting;
           String actual = snap.data ?? (tipo == "mascota" ? 'sin_novedad' : 'en_uso');
 
-          // 🔧 Si el valor actual no está en la lista, usa el primero
+          
           if (!estadosQR.contains(actual)) actual = estadosQR.first;
 
           final seleccionado = _seleccionDropdownPorObjeto[idHex] ?? actual;
@@ -419,7 +417,6 @@ class _VerSiniestrosPageState extends State<VerSiniestrosPage> {
     );
   }
 
-  // ===================== MAIN UI =====================
 
   @override
   Widget build(BuildContext context) {
@@ -455,7 +452,7 @@ class _VerSiniestrosPageState extends State<VerSiniestrosPage> {
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Lista lateral
+                      
                       Container(
                         width: 270,
                         padding:

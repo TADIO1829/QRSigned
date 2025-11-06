@@ -6,6 +6,7 @@ import './utils/crypto_utils.dart';
 import './Clientes/editar_cliente_page.dart';
 import 'Siniestros/nuevo_siniestro_page.dart';
 import '../Siniestros/ver_siniestros_page.dart';
+import '../Siniestros/ver_objetos_page.dart';
 import 'polling_service.dart';
 import 'login_page.dart';
 
@@ -239,6 +240,13 @@ class _MainMenuPageState extends State<MainMenuPage> {
                     MaterialPageRoute(builder: (_) => const VerSiniestrosPage()),
                   );
                 }),
+                subMenuButton(context, "Ver Objetos", Icons.inventory_2, azulClaro, () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const VerObjetosPage()),
+                  );
+                }),
+
               ],
 
               const SizedBox(height: 25),
