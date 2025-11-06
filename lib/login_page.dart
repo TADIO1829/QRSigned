@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'mainmenu.dart';
 import 'mainmenu_user.dart';
+import '../usuario_global.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -21,19 +22,18 @@ class _LoginPageState extends State<LoginPage> {
       error = '';
     });
 
-    // Pequeño retardo para UX
     await Future.delayed(const Duration(milliseconds: 400));
 
     final email = userController.text.trim().toLowerCase();
     final password = passController.text.trim();
 
-    // 🔹 Credenciales de administrador
     if (email == "admin@admin.com" && password == "made") {
+      UsuarioGlobal.setUsuario(tipoUsuario: "admin", nombreUsuario: "Esthefany");
       await showDialog(
         context: context,
         builder: (_) => AlertDialog(
           title: const Text("¡Bienvenido Admin!"),
-          content: Text('Usuario administrador: Esthefany'),
+          content: const Text('Usuario administrador: Esthefany'),
           actions: [
             TextButton(
               onPressed: () {
@@ -48,15 +48,13 @@ class _LoginPageState extends State<LoginPage> {
           ],
         ),
       );
-    }
-
-    // 🔹 Credenciales de usuario normal
-    else if (email == "usuario@gmail.com" && password == "made") {
+    } else if (email == "usuario@gmail.com" && password == "made") {
+      UsuarioGlobal.setUsuario(tipoUsuario: "usuario", nombreUsuario: "Tadeo");
       await showDialog(
         context: context,
         builder: (_) => AlertDialog(
           title: const Text("¡Bienvenido Usuario!"),
-          content: Text('Acceso como usuario estándar: Tadeo'),
+          content: const Text('Acceso como usuario estándar: Tadeo'),
           actions: [
             TextButton(
               onPressed: () {
@@ -71,10 +69,7 @@ class _LoginPageState extends State<LoginPage> {
           ],
         ),
       );
-    }
-
-    // ❌ Credenciales incorrectas
-    else {
+    } else {
       setState(() => error = 'Usuario o contraseña incorrectos');
     }
 
@@ -112,7 +107,6 @@ class _LoginPageState extends State<LoginPage> {
                 color: azulClaro,
               ),
               const SizedBox(height: 10),
-
               const Text(
                 "Iniciar sesión",
                 style: TextStyle(
@@ -122,39 +116,32 @@ class _LoginPageState extends State<LoginPage> {
                 ),
               ),
               const SizedBox(height: 26),
-
               TextField(
                 controller: userController,
                 keyboardType: TextInputType.emailAddress,
                 decoration: InputDecoration(
                   labelText: "Email",
-                 
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  prefixIcon:
-                      const Icon(Icons.person_outline, color: azulClaro),
+                  prefixIcon: const Icon(Icons.person_outline, color: azulClaro),
                 ),
                 onSubmitted: (_) => _login(),
               ),
               const SizedBox(height: 18),
-
               TextField(
                 controller: passController,
                 obscureText: true,
                 decoration: InputDecoration(
                   labelText: "Contraseña",
-                
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  prefixIcon:
-                      const Icon(Icons.lock_outline, color: azulClaro),
+                  prefixIcon: const Icon(Icons.lock_outline, color: azulClaro),
                 ),
                 onSubmitted: (_) => _login(),
               ),
               const SizedBox(height: 24),
-
               if (error.isNotEmpty)
                 Text(
                   error,
@@ -163,9 +150,7 @@ class _LoginPageState extends State<LoginPage> {
                     fontWeight: FontWeight.w500,
                   ),
                 ),
-
               const SizedBox(height: 16),
-
               loading
                   ? const CircularProgressIndicator()
                   : SizedBox(
@@ -181,7 +166,7 @@ class _LoginPageState extends State<LoginPage> {
                           ),
                         ),
                         onPressed: () async {
-                          FocusScope.of(context).unfocus(); // 🔹 Cierra teclado
+                          FocusScope.of(context).unfocus();
                           await _login();
                         },
                         child: const Text(

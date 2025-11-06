@@ -1,7 +1,7 @@
 // polling_service.dart
 import 'dart:async';
 import 'package:mongo_dart/mongo_dart.dart' as mongo;
-import 'mongo_connection.dart';
+import '../db/mongo_connection.dart';
 import 'notificaciones.dart';
 import './utils/crypto_utils.dart'; 
 
@@ -50,7 +50,7 @@ class PollingService {
           if (clienteId != null) {
             mongo.ObjectId? objectId;
 
-            // ✅ Detectar correctamente el formato del ID
+            
             if (clienteId is mongo.ObjectId) {
               objectId = clienteId;
             } else if (clienteId is String) {
@@ -58,7 +58,7 @@ class PollingService {
                 objectId = mongo.ObjectId.parse(clienteId);
               } catch (_) {}
             } else if (clienteId.toString().contains('ObjectId(')) {
-              // ✅ Regex corregido y verificado
+             
               final match = RegExp('ObjectId\\(["\']?([a-fA-F0-9]{24})["\']?\\)')
                   .firstMatch(clienteId.toString());
               if (match != null) {
@@ -66,19 +66,19 @@ class PollingService {
               }
             }
 
-            // Si el ObjectId no es válido, saltamos este registro
+            
             if (objectId == null) {
               print("⚠️ No se pudo obtener ObjectId válido para cliente_id: $clienteId");
               continue;
             }
 
-            // ✅ Buscar cliente asociado
+          
             final cliente = await clientesCol.findOne(mongo.where.id(objectId));
 
             if (cliente != null) {
               nombre = cliente['nombre'] ?? 'Sin nombre';
 
-              // Desencriptar la cédula (si aplica)
+              
               try {
                 final rawCedula = cliente['cedula'];
                 if (rawCedula != null && rawCedula.toString().isNotEmpty) {
@@ -93,7 +93,7 @@ class PollingService {
             }
           }
 
-          // ✅ Generar mensaje de notificación
+          
           final detalle = (cedula.isNotEmpty && cedula != "[dato inválido]")
               ? "📢 $tipo de $nombre (C.I: $cedula) actualizado"
               : "📢 $tipo de $nombre actualizado";
@@ -105,7 +105,7 @@ class PollingService {
         print("⏳ No hay actualizaciones nuevas.");
       }
 
-      // Actualiza el timestamp del último chequeo
+      
       _lastCheck = DateTime.now();
     } catch (e) {
       print("❌ Error en polling: $e");

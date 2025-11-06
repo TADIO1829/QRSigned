@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:mongo_dart/mongo_dart.dart' as mongo;
-import './db/mongo_connection.dart';
-import './utils/crypto_utils.dart';
+import '../db/mongo_connection.dart';
+import '../utils/crypto_utils.dart';
 
 class EditarClientePage extends StatefulWidget {
   final Map<String, dynamic> cliente;
@@ -45,15 +45,11 @@ class _EditarClientePageState extends State<EditarClientePage> {
     }
   }
 
+  // CORREGIDO: Función simplificada para encriptar
   String safeEncrypt(String text) {
     if (text.isEmpty) return '';
-    try {
-      
-      CryptoUtils.decryptText(text);
-      return text;
-    } catch (_) {
-      return CryptoUtils.encryptText(text);
-    }
+    // Siempre encriptar el texto, sin verificar si ya está encriptado
+    return CryptoUtils.encryptText(text);
   }
 
   
@@ -64,7 +60,6 @@ class _EditarClientePageState extends State<EditarClientePage> {
       return "Básica";
     }
     
-   
     if (poliza == "Básica" || poliza == "Premium") {
       return poliza;
     }

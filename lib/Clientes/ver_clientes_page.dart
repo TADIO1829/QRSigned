@@ -2,12 +2,14 @@ import 'dart:io';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:path/path.dart' as p;
-import 'mongo_connection.dart';
-import './utils/crypto_utils.dart';
-import 'cliente_global.dart';
-import 'mainmenu.dart';
+import '../db/mongo_connection.dart';
+import '../utils/crypto_utils.dart';
+import '../cliente_global.dart';
+import '../mainmenu.dart';
+import '../mainmenu_user.dart';
+import '../usuario_global.dart';
 import 'editar_cliente_page.dart';
-import 'polling_service.dart';
+import '../polling_service.dart';
 import 'package:overlay_support/overlay_support.dart';
 
 void mostrarNotificacionEscaneo(String mensaje) {
@@ -37,7 +39,6 @@ class _VerClientesPageState extends State<VerClientesPage> {
   static const String _kBaseLocal = r'C:\imagenesclientes';
   static const String _kBaseLegacy = r'\\DARKSOUL\imagenes_clientes';
 
-  // Función segura para desencriptar
   String safeDecrypt(String? text) {
     if (text == null || text.isEmpty) return '';
     try {
@@ -196,7 +197,6 @@ class _VerClientesPageState extends State<VerClientesPage> {
           ),
           child: Row(
             children: [
-              // ---------- PANEL IZQUIERDO ----------
               Container(
                 width: 280,
                 padding: const EdgeInsets.all(16),
@@ -303,7 +303,6 @@ class _VerClientesPageState extends State<VerClientesPage> {
                 ),
               ),
               const SizedBox(width: 20),
-              // ---------- PANEL DERECHO ----------
               Expanded(
                 child: Container(
                   padding: const EdgeInsets.all(20),
@@ -402,12 +401,21 @@ class _VerClientesPageState extends State<VerClientesPage> {
                               onPressed: () {
                                 final cliente = filtrados[seleccionado!];
                                 ClienteGlobal.seleccionar(cliente);
-                                Navigator.pushReplacement(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) => const MainMenuPage(),
-                                  ),
-                                );
+                                if (UsuarioGlobal.esAdmin) {
+                                  Navigator.pushReplacement(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => const MainMenuPage(),
+                                    ),
+                                  );
+                                } else {
+                                  Navigator.pushReplacement(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => const MainMenuUserPage(),
+                                    ),
+                                  );
+                                }
                               },
                             ),
                           ],
@@ -423,7 +431,6 @@ class _VerClientesPageState extends State<VerClientesPage> {
     );
   }
 
-  // ---------- DETALLE DEL CLIENTE ----------
   Widget _detalleCliente(Map<String, dynamic> cliente) {
     final List mats = cliente['matriculas'] ?? [];
     final List contactos = cliente['contactos'] ?? [];
@@ -447,8 +454,6 @@ class _VerClientesPageState extends State<VerClientesPage> {
         _row("Teléfono:", _BlurRevealText(telefono.isEmpty ? "—" : telefono)),
         _row("Póliza:", Text(cliente['poliza']?.toString() ?? '—')),
         const SizedBox(height: 14),
-
-        // ---------- IMÁGENES ----------
         if (ruta1.isNotEmpty || ruta2.isNotEmpty) ...[
           _titulo("Imágenes del cliente"),
           const SizedBox(height: 6),
@@ -461,8 +466,6 @@ class _VerClientesPageState extends State<VerClientesPage> {
           ),
           const SizedBox(height: 14),
         ],
-
-        // ---------- VEHÍCULOS ----------
         _titulo("Vehículos registrados"),
         mats.isEmpty
             ? const Padding(
@@ -488,8 +491,6 @@ class _VerClientesPageState extends State<VerClientesPage> {
                 }).toList(),
               ),
         const SizedBox(height: 14),
-
-        // ---------- MASCOTAS ----------
         _titulo("Mascotas"),
         mascotas.isEmpty
             ? const Padding(
@@ -514,10 +515,7 @@ class _VerClientesPageState extends State<VerClientesPage> {
                   );
                 }).toList(),
               ),
-
         const SizedBox(height: 14),
-
-        // ==== OBJETOS PERSONALES ====
         _titulo("Objetos personales"),
         objetos.isEmpty
             ? const Padding(
@@ -541,10 +539,7 @@ class _VerClientesPageState extends State<VerClientesPage> {
                   );
                 }).toList(),
               ),
-
         const SizedBox(height: 14),
-
-        // ---------- CONTACTOS ----------
         _titulo("Contactos alternativos"),
         contactos.isEmpty
             ? const Padding(
@@ -573,7 +568,6 @@ class _VerClientesPageState extends State<VerClientesPage> {
     );
   }
 
-  // ---------- HELPERS ----------
   Widget _titulo(String texto) => Padding(
         padding: const EdgeInsets.only(bottom: 5),
         child: Text(
@@ -603,7 +597,6 @@ class _VerClientesPageState extends State<VerClientesPage> {
   }
 }
 
-/// ---------- TEXTO BORROSO CON ICONO DE OJO ----------
 class _BlurRevealText extends StatefulWidget {
   final String text;
   final double blurSigma;

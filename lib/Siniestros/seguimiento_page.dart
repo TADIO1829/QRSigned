@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:mongo_dart/mongo_dart.dart' as mongo;
-import 'mongo_connection.dart';
-import 'cliente_global.dart';
+import '../db/mongo_connection.dart';
+import '../cliente_global.dart';
 import 'package:overlay_support/overlay_support.dart';
 
 void mostrarNotificacionEscaneo(String mensaje) {

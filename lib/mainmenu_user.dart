@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
-import 'ver_clientes_page.dart';
-import 'ver_siniestros_page.dart';
-import 'nuevo_siniestro_page.dart'; 
-import 'cliente_global.dart';
-import './utils/crypto_utils.dart';
-import 'polling_service.dart';
+import '../Clientes/ver_clientes_page.dart';
+import '../Siniestros/ver_siniestros_page.dart';
+import '../Siniestros/nuevo_siniestro_page.dart';
+import '../cliente_global.dart';
+import '../utils/crypto_utils.dart';
+import '../polling_service.dart';
+import './login_page.dart'; 
 
 class MainMenuUserPage extends StatefulWidget {
   const MainMenuUserPage({super.key});
@@ -57,6 +58,43 @@ class _MainMenuUserPageState extends State<MainMenuUserPage> {
         backgroundColor: azulClaro,
         foregroundColor: Colors.white,
         elevation: 0,
+        actions: [
+          IconButton(
+            tooltip: "Cerrar sesión",
+            icon: const Icon(Icons.logout),
+            onPressed: () async {
+              final confirmar = await showDialog<bool>(
+                context: context,
+                builder: (_) => AlertDialog(
+                  title: const Text("Cerrar sesión"),
+                  content: const Text("¿Seguro que deseas cerrar sesión?"),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context, false),
+                      child: const Text("Cancelar"),
+                    ),
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: azulClaro,
+                      ),
+                      onPressed: () => Navigator.pop(context, true),
+                      child: const Text("Salir"),
+                    ),
+                  ],
+                ),
+              );
+
+              if (confirmar == true && context.mounted) {
+                ClienteGlobal.seleccionado = null;
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(builder: (_) => const LoginPage()),
+                  (route) => false,
+                );
+              }
+            },
+          ),
+        ],
       ),
       body: Center(
         child: Container(
@@ -76,7 +114,7 @@ class _MainMenuUserPageState extends State<MainMenuUserPage> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // 🔹 Ícono QR superior
+              
               Icon(
                 Icons.qr_code_2,
                 size: 70,
@@ -93,7 +131,7 @@ class _MainMenuUserPageState extends State<MainMenuUserPage> {
               ),
               const SizedBox(height: 22),
 
-              // === CLIENTES ===
+              
               menuButton(
                 context,
                 "Clientes",
@@ -115,7 +153,7 @@ class _MainMenuUserPageState extends State<MainMenuUserPage> {
                 }),
               ],
 
-              // === SINIESTROS ===
+             
               menuButton(
                 context,
                 "Siniestros",
@@ -156,7 +194,7 @@ class _MainMenuUserPageState extends State<MainMenuUserPage> {
 
               const SizedBox(height: 25),
 
-              // === CLIENTE ACTIVO ===
+         
               Row(
                 children: [
                   Icon(Icons.verified_user, color: azulClaro),
@@ -192,7 +230,7 @@ class _MainMenuUserPageState extends State<MainMenuUserPage> {
     );
   }
 
-  // === BOTÓN PRINCIPAL ===
+  
   Widget menuButton(
       BuildContext context, String label, bool expanded, VoidCallback onTap, Color azulClaro) {
     return AnimatedContainer(
@@ -246,7 +284,7 @@ class _MainMenuUserPageState extends State<MainMenuUserPage> {
     );
   }
 
-  // === SUBMENÚ ===
+ 
   Widget subMenuButton(
       BuildContext context, String label, IconData icon, Color azulClaro, VoidCallback onTap) {
     return Container(
