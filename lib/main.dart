@@ -14,7 +14,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Aseguradora Desktop',
+      title: 'QR Signed',
       debugShowCheckedModeBanner: false,
       initialRoute: '/',
       routes: {

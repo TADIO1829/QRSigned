@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:mongo_dart/mongo_dart.dart' as mongo;
 import '../db/mongo_connection.dart';
@@ -15,21 +16,53 @@ class _VerObjetosPageState extends State<VerObjetosPage> {
   bool loading = true;
   List<Map<String, dynamic>> objetos = [];
   List<Map<String, dynamic>> clientes = [];
+  Timer? _autoRefreshTimer;
 
   @override
   void initState() {
     super.initState();
     _cargarDatos();
+    _autoRefreshTimer = Timer.periodic(const Duration(seconds: 10), (_) {
+      _cargarDatos(auto: true);
+    });
   }
 
-  Future<void> _cargarDatos() async {
+  @override
+  void dispose() {
+    _autoRefreshTimer?.cancel();
+    super.dispose();
+  }
+
+  // 🔄 NUEVA FUNCIÓN: Leer estado desde users usando objetoId
+  Future<String> _obtenerEstadoDesdeUsers(String objetoIdHex) async {
+    if (objetoIdHex.isEmpty) return 'en_uso';
+    
+    try {
+      final db = await MongoDatabase.connect();
+      final colUsers = db.collection('users');
+      
+      final userDoc = await colUsers.findOne(
+        mongo.where.eq('objetoId', mongo.ObjectId.parse(objetoIdHex)),
+      );
+      
+      return userDoc?['status']?.toString() ?? 'en_uso';
+    } catch (e) {
+      print("❌ Error leyendo estado desde users: $e");
+      return 'en_uso';
+    }
+  }
+
+  Future<void> _cargarDatos({bool auto = false}) async {
+    if (!auto) {
+      setState(() => loading = true);
+    }
+
     final db = await MongoDatabase.connect();
     final colObjetos = db.collection("objetos");
     final colClientes = db.collection("clientes");
 
     final listaClientes = await colClientes.find().toList();
 
-    // Si hay cliente seleccionado, solo muestra sus objetos
     var query = mongo.where;
     if (ClienteGlobal.clienteSeleccionado != null) {
       final clienteSel = ClienteGlobal.clienteSeleccionado!;
@@ -39,11 +72,29 @@ class _VerObjetosPageState extends State<VerObjetosPage> {
     final listaObjetos =
         await colObjetos.find(query.sortBy('_id', descending: true)).toList();
 
-    setState(() {
-      clientes = listaClientes;
-      objetos = listaObjetos;
-      loading = false;
-    });
+    // 🔄 ACTUALIZACIÓN: Obtener estado desde users para cada objeto
+    for (var obj in listaObjetos) {
+      final objetoId = obj["_id"];
+      if (objetoId != null) {
+        final objetoIdHex = _objetoIdHex(objetoId);
+        final estadoDesdeUsers = await _obtenerEstadoDesdeUsers(objetoIdHex);
+        obj["estado"] = estadoDesdeUsers; // 👈 Sobrescribir con estado de users
+      }
+    }
+
+    if (mounted) {
+      setState(() {
+        clientes = listaClientes;
+        objetos = listaObjetos;
+        loading = false;
+      });
+    }
+  }
+
+  // 🔄 FUNCIÓN AUXILIAR: Convertir ObjectId a hex string
+  String _objetoIdHex(dynamic objId) {
+    if (objId is mongo.ObjectId) return objId.oid;
+    return objId?.toString() ?? '';
   }
 
   String _nombreCliente(mongo.ObjectId id) {
@@ -67,6 +118,20 @@ class _VerObjetosPageState extends State<VerObjetosPage> {
         return Colors.green.shade700;
       case "inactivo":
         return Colors.grey.shade700;
+      case "pendiente":
+        return Colors.amber.shade700;
+      case "robado":
+      case "perdido":
+      case "en_reparacion":
+        return Colors.red.shade700;
+      case "en_uso":
+        return Colors.blue.shade700;
+      case "en_venta":
+        return Colors.purple.shade700;
+      case "prestado":
+        return Colors.cyan.shade700;
+      case "encontrado":
+        return Colors.green.shade700;
       default:
         return Colors.blueGrey;
     }
@@ -85,7 +150,7 @@ class _VerObjetosPageState extends State<VerObjetosPage> {
     List<Widget> info = [
       Text("Descripción: $descripcion"),
       Text("Tipo: $tipo"),
-      Text("Estado: $estado",
+      Text("Estado QR: $estado", // 👈 Cambié el texto para claridad
           style: TextStyle(
               color: _colorEstado(estado), fontWeight: FontWeight.bold)),
     ];
@@ -174,6 +239,7 @@ class _VerObjetosPageState extends State<VerObjetosPage> {
                               ),
                               const SizedBox(height: 6),
                               _detalleObjeto(obj),
+                              
                             ],
                           ),
                         ),

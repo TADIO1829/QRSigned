@@ -35,10 +35,13 @@ class _VerSiniestrosPageState extends State<VerSiniestrosPage> {
   void initState() {
     super.initState();
     cargarSiniestros();
-    PollingService.startPolling();
   }
 
-  
+  // Función para verificar si un siniestro está cerrado
+  bool _estaCerrado(Map<String, dynamic>? siniestro) {
+    return siniestro != null && 
+           siniestro["estado"]?.toString().toLowerCase() == "cerrado";
+  }
 
   String _objetoIdHex(dynamic objId) {
     if (objId is mongo.ObjectId) return objId.oid;
@@ -58,6 +61,14 @@ class _VerSiniestrosPageState extends State<VerSiniestrosPage> {
     required String objetoIdHex,
     required String nuevoStatus,
   }) async {
+    // Si el siniestro está cerrado, no permitir cambios
+    if (_estaCerrado(siniestroSeleccionado)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("❌ No se puede modificar un caso cerrado")),
+      );
+      return;
+    }
+
     final db = await MongoDatabase.connect();
     final users = db.collection('users');
     await users.updateMany(
@@ -146,11 +157,23 @@ class _VerSiniestrosPageState extends State<VerSiniestrosPage> {
             (s["fecha"]?.toString().isNotEmpty ?? false))
         .toList();
 
+    // Ordenar para que los casos cerrados aparezcan al final
+    res.sort((a, b) {
+      final aCerrado = _estaCerrado(a);
+      final bCerrado = _estaCerrado(b);
+      if (aCerrado && !bCerrado) return 1;
+      if (!aCerrado && bCerrado) return -1;
+      return 0;
+    });
+
     setState(() {
       siniestros = res;
       loading = false;
       if (siniestros.isNotEmpty) {
-        siniestroSeleccionado ??= siniestros.first;
+        siniestroSeleccionado ??= siniestros.firstWhere(
+          (s) => !_estaCerrado(s),
+          orElse: () => siniestros.first,
+        );
       } else {
         siniestroSeleccionado = null;
       }
@@ -159,19 +182,57 @@ class _VerSiniestrosPageState extends State<VerSiniestrosPage> {
 
   Future<void> cerrarCaso() async {
     if (siniestroSeleccionado == null) return;
-    final db = await MongoDatabase.connect();
-    final col = db.collection('siniestros');
-    await col.updateOne(
-      mongo.where.id(siniestroSeleccionado!["_id"]),
-      mongo.modify.set("estado", "cerrado"),
-    );
-    ScaffoldMessenger.of(context)
-        .showSnackBar(const SnackBar(content: Text("Caso cerrado")));
-    await cargarSiniestros();
-    setState(() => siniestroSeleccionado = null);
+
+    try {
+      final db = await MongoDatabase.connect();
+      final col = db.collection('siniestros');
+      final id = siniestroSeleccionado!["_id"];
+
+      // Actualizar el estado a "cerrado"
+      await col.updateOne(
+        mongo.where.id(id),
+        mongo.modify.set("estado", "cerrado"),
+      );
+
+      final actualizado = await col.findOne(mongo.where.id(id));
+
+      setState(() {
+        if (actualizado != null) {
+          siniestroSeleccionado = actualizado;
+          final index = siniestros.indexWhere((s) => s["_id"] == id);
+          if (index != -1) siniestros[index] = actualizado;
+          
+          // Reordenar la lista
+          siniestros.sort((a, b) {
+            final aCerrado = _estaCerrado(a);
+            final bCerrado = _estaCerrado(b);
+            if (aCerrado && !bCerrado) return 1;
+            if (!aCerrado && bCerrado) return -1;
+            return 0;
+          });
+        }
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("✅ Caso cerrado correctamente")),
+      );
+    } catch (e) {
+      print("❌ Error al cerrar caso: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Error al cerrar caso: $e")),
+      );
+    }
   }
 
   Future<void> agregarSeguimiento() async {
+    // Verificar si el caso está cerrado
+    if (_estaCerrado(siniestroSeleccionado)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("❌ No se pueden añadir seguimientos a un caso cerrado")),
+      );
+      return;
+    }
+
     if (siniestroSeleccionado == null) return;
     final TextEditingController seguimientoController = TextEditingController();
 
@@ -210,8 +271,6 @@ class _VerSiniestrosPageState extends State<VerSiniestrosPage> {
       ),
     );
   }
-
-
 
   String _fmtFecha(dynamic iso) {
     final s = iso?.toString() ?? '';
@@ -298,83 +357,108 @@ class _VerSiniestrosPageState extends State<VerSiniestrosPage> {
   }
 
   Widget _dropdownEstadoQR(Map<String, dynamic> sin) {
-  final idHex = _objetoIdHex(sin["objeto_id"]);
-  if (idHex.isEmpty) return const Text("Objeto sin ID");
-
-  return FutureBuilder<Map<String, dynamic>?>(
-    future: _leerObjeto(idHex),
-    builder: (context, objSnap) {
-      final tipo = (objSnap.data?["tipo"] ?? "objeto").toString();
-
-     
-      final estadosQR = (tipo == "mascota")
-          ? ['sin_novedad', 'perdida', 'encontrada']
-          : ['en_uso', 'perdido', 'robado', 'en_venta', 'en_reparacion', 'prestado', 'encontrado'];
-
+    // Si el caso está cerrado, mostrar estado pero deshabilitado
+    if (_estaCerrado(sin)) {
       return FutureBuilder<String>(
         future: _ensureEstadoQRLoaded(sin),
         builder: (context, snap) {
-          final cargando = snap.connectionState == ConnectionState.waiting;
-          String actual = snap.data ?? (tipo == "mascota" ? 'sin_novedad' : 'en_uso');
-
-          
-          if (!estadosQR.contains(actual)) actual = estadosQR.first;
-
-          final seleccionado = _seleccionDropdownPorObjeto[idHex] ?? actual;
-
+          final actual = snap.data ?? 'en_uso';
           return Row(
             children: [
               const Text("Estado QR: ",
                   style: TextStyle(fontWeight: FontWeight.bold)),
               const SizedBox(width: 8),
-              DropdownButton<String>(
-                value: estadosQR.contains(seleccionado)
-                    ? seleccionado
-                    : estadosQR.first,
-                items: estadosQR
-                    .map((e) => DropdownMenuItem(
-                        value: e, child: Text(e)))
-                    .toList(),
-                onChanged: cargando
-                    ? null
-                    : (v) {
-                        if (v == null) return;
-                        setState(() {
-                          _seleccionDropdownPorObjeto[idHex] = v;
-                        });
-                      },
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade200,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Text(actual, style: TextStyle(color: Colors.grey.shade600)),
               ),
               const SizedBox(width: 12),
-              ElevatedButton.icon(
-                icon: const Icon(Icons.sync),
-                label: Text(cargando ? "Cargando..." : "Aplicar"),
-                onPressed: cargando
-                    ? null
-                    : () async {
-                        final nuevo =
-                            _seleccionDropdownPorObjeto[idHex] ?? actual;
-                        await _cambiarEstadoQRParaObjeto(
-                            objetoIdHex: idHex, nuevoStatus: nuevo);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                              content:
-                                  Text("Estado QR actualizado a '$nuevo'")),
-                        );
-                        setState(() {});
-                      },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF4D82BC),
-                  foregroundColor: Colors.white,
-                ),
-              ),
+              const Text("(Caso cerrado - No editable)",
+                  style: TextStyle(fontStyle: FontStyle.italic, color: Colors.grey)),
             ],
           );
         },
       );
-    },
-  );
-}
+    }
 
+    final idHex = _objetoIdHex(sin["objeto_id"]);
+    if (idHex.isEmpty) return const Text("Objeto sin ID");
+
+    return FutureBuilder<Map<String, dynamic>?>(
+      future: _leerObjeto(idHex),
+      builder: (context, objSnap) {
+        final tipo = (objSnap.data?["tipo"] ?? "objeto").toString();
+
+        final estadosQR = (tipo == "mascota")
+            ? ['sin_novedad', 'perdida', 'encontrada']
+            : ['en_uso', 'perdido', 'robado', 'en_venta', 'en_reparacion', 'prestado', 'encontrado'];
+
+        return FutureBuilder<String>(
+          future: _ensureEstadoQRLoaded(sin),
+          builder: (context, snap) {
+            final cargando = snap.connectionState == ConnectionState.waiting;
+            String actual = snap.data ?? (tipo == "mascota" ? 'sin_novedad' : 'en_uso');
+
+            if (!estadosQR.contains(actual)) actual = estadosQR.first;
+
+            final seleccionado = _seleccionDropdownPorObjeto[idHex] ?? actual;
+
+            return Row(
+              children: [
+                const Text("Estado QR: ",
+                    style: TextStyle(fontWeight: FontWeight.bold)),
+                const SizedBox(width: 8),
+                DropdownButton<String>(
+                  value: estadosQR.contains(seleccionado)
+                      ? seleccionado
+                      : estadosQR.first,
+                  items: estadosQR
+                      .map((e) => DropdownMenuItem(
+                          value: e, child: Text(e)))
+                      .toList(),
+                  onChanged: cargando
+                      ? null
+                      : (v) {
+                          if (v == null) return;
+                          setState(() {
+                            _seleccionDropdownPorObjeto[idHex] = v;
+                          });
+                        },
+                ),
+                const SizedBox(width: 12),
+                ElevatedButton.icon(
+                  icon: const Icon(Icons.sync),
+                  label: Text(cargando ? "Cargando..." : "Aplicar"),
+                  onPressed: cargando
+                      ? null
+                      : () async {
+                          final nuevo =
+                              _seleccionDropdownPorObjeto[idHex] ?? actual;
+                          await _cambiarEstadoQRParaObjeto(
+                              objetoIdHex: idHex, nuevoStatus: nuevo);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                                content:
+                                    Text("Estado QR actualizado a '$nuevo'")),
+                          );
+                          setState(() {});
+                        },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF4D82BC),
+                    foregroundColor: Colors.white,
+                  ),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
 
   Widget _fichaObjeto(Map<String, dynamic> sin) {
     final idHex = _objetoIdHex(sin["objeto_id"]);
@@ -417,7 +501,6 @@ class _VerSiniestrosPageState extends State<VerSiniestrosPage> {
     );
   }
 
-
   @override
   Widget build(BuildContext context) {
     final azul = const Color(0xFF4D82BC);
@@ -452,7 +535,6 @@ class _VerSiniestrosPageState extends State<VerSiniestrosPage> {
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      
                       Container(
                         width: 270,
                         padding:
@@ -475,6 +557,8 @@ class _VerSiniestrosPageState extends State<VerSiniestrosPage> {
                                     return const SizedBox.shrink();
                                   final seleccionado =
                                       siniestroSeleccionado?["_id"] == sin["_id"];
+                                  final cerrado = _estaCerrado(sin);
+                                  
                                   return Material(
                                     color: seleccionado
                                         ? azul.withOpacity(0.13)
@@ -482,19 +566,22 @@ class _VerSiniestrosPageState extends State<VerSiniestrosPage> {
                                     borderRadius: BorderRadius.circular(7),
                                     child: ListTile(
                                       title: Text(
-                                          "${sin["tipo"]} - ${sin["fecha"]}",
-                                          style: const TextStyle(
-                                              fontWeight: FontWeight.bold)),
+                                          "${sin["tipo"]} - ${sin["fecha"]}${cerrado ? " (Cerrado)" : ""}",
+                                          style: TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              color: cerrado ? Colors.grey : Colors.black)),
                                       subtitle: Text(
                                         (sin["descripcion"] ?? '').toString(),
                                         maxLines: 2,
                                         overflow: TextOverflow.ellipsis,
+                                        style: TextStyle(color: cerrado ? Colors.grey : null),
                                       ),
+                                      trailing: cerrado 
+                                          ? const Icon(Icons.lock, color: Colors.grey, size: 16)
+                                          : null,
                                       onTap: () async {
-                                        setState(
-                                            () => siniestroSeleccionado = sin);
-                                        final idHex =
-                                            _objetoIdHex(sin["objeto_id"]);
+                                        setState(() => siniestroSeleccionado = sin);
+                                        final idHex = _objetoIdHex(sin["objeto_id"]);
                                         if (idHex.isNotEmpty) {
                                           final s = await _leerEstadoQRDeUsers(idHex) ??
                                               'en_uso';
@@ -524,11 +611,32 @@ class _VerSiniestrosPageState extends State<VerSiniestrosPage> {
                                   child: Column(
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
-                                      Text("Detalles del Siniestro",
-                                          style: TextStyle(
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: 18,
-                                              color: azul)),
+                                      Row(
+                                        children: [
+                                          Text("Detalles del Siniestro",
+                                              style: TextStyle(
+                                                  fontWeight: FontWeight.bold,
+                                                  fontSize: 18,
+                                                  color: azul)),
+                                          if (_estaCerrado(siniestroSeleccionado))
+                                            Container(
+                                              margin: const EdgeInsets.only(left: 12),
+                                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                              decoration: BoxDecoration(
+                                                color: Colors.grey,
+                                                borderRadius: BorderRadius.circular(12),
+                                              ),
+                                              child: const Text(
+                                                "CERRADO",
+                                                style: TextStyle(
+                                                  color: Colors.white,
+                                                  fontSize: 12,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                            ),
+                                        ],
+                                      ),
                                       const SizedBox(height: 8),
                                       Text("Fecha: ${siniestroSeleccionado!["fecha"]}"),
                                       Text("Hora: ${siniestroSeleccionado!["hora"]}"),
@@ -551,30 +659,40 @@ class _VerSiniestrosPageState extends State<VerSiniestrosPage> {
                                               color: Color(0xFF4D82BC))),
                                       _bloqueSeguimiento(siniestroSeleccionado!),
                                       const SizedBox(height: 20),
-                                      Row(
-                                        children: [
-                                          ElevatedButton.icon(
-                                            onPressed: agregarSeguimiento,
-                                            icon: const Icon(Icons.add_comment_outlined),
-                                            label:
-                                                const Text("Añadir seguimiento"),
-                                            style: ElevatedButton.styleFrom(
-                                              backgroundColor: azul,
-                                              foregroundColor: Colors.white,
+                                      // Mostrar botones solo si el caso NO está cerrado
+                                      if (!_estaCerrado(siniestroSeleccionado))
+                                        Row(
+                                          children: [
+                                            ElevatedButton.icon(
+                                              onPressed: agregarSeguimiento,
+                                              icon: const Icon(Icons.add_comment_outlined),
+                                              label:
+                                                  const Text("Añadir seguimiento"),
+                                              style: ElevatedButton.styleFrom(
+                                                backgroundColor: azul,
+                                                foregroundColor: Colors.white,
+                                              ),
                                             ),
-                                          ),
-                                          const SizedBox(width: 12),
-                                          ElevatedButton.icon(
-                                            onPressed: cerrarCaso,
-                                            icon: const Icon(Icons.close_rounded),
-                                            label: const Text("Cerrar caso"),
-                                            style: ElevatedButton.styleFrom(
-                                              backgroundColor: Colors.red,
-                                              foregroundColor: Colors.white,
+                                            const SizedBox(width: 12),
+                                            ElevatedButton.icon(
+                                              onPressed: cerrarCaso,
+                                              icon: const Icon(Icons.close_rounded),
+                                              label: const Text("Cerrar caso"),
+                                              style: ElevatedButton.styleFrom(
+                                                backgroundColor: Colors.red,
+                                                foregroundColor: Colors.white,
+                                              ),
                                             ),
+                                          ],
+                                        )
+                                      else
+                                        const Text(
+                                          "Este caso está cerrado y no se puede modificar",
+                                          style: TextStyle(
+                                            fontStyle: FontStyle.italic,
+                                            color: Colors.grey,
                                           ),
-                                        ],
-                                      )
+                                        ),
                                     ],
                                   ),
                                 ),
