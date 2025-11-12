@@ -251,18 +251,31 @@ class _EditarClientePageState extends State<EditarClientePage> {
     }
   }
 
-  Future<void> _eliminarCliente() async {
+  // 🔥 NUEVA FUNCIÓN: Eliminar todo relacionado con el cliente
+  Future<void> _eliminarClienteCompletamente() async {
     final confirmar = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text("Confirmar eliminación"),
-        content: const Text("¿Estás seguro de eliminar este cliente?"),
+        title: const Text("⚠️ ELIMINACIÓN COMPLETA"),
+        content: const Text(
+          "¿Estás SEGURO de eliminar este cliente y TODOS sus datos?\n\n"
+          "Esto borrará:\n"
+          "• Cliente principal\n"
+          "• Todos sus objetos registrados\n"
+          "• Todos sus siniestros\n"
+          "• Todos sus usuarios/QRs\n\n"
+          "¡Esta acción NO se puede deshacer!",
+          style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+        ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text("Cancelar")),
+          TextButton(
+            onPressed: () => Navigator.pop(context, false), 
+            child: const Text("Cancelar")
+          ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
             onPressed: () => Navigator.pop(context, true),
-            child: const Text("Eliminar", style: TextStyle(color: Colors.white)),
+            child: const Text("ELIMINAR TODO", style: TextStyle(color: Colors.white)),
           ),
         ],
       ),
@@ -273,11 +286,70 @@ class _EditarClientePageState extends State<EditarClientePage> {
     try {
       setState(() => loading = true);
       final db = await MongoDatabase.connect();
-      final col = db.collection('clientes');
-      await col.deleteOne(mongo.where.id(widget.cliente['_id']));
-      if (context.mounted) Navigator.pop(context);
+      final clienteId = widget.cliente['_id'];
+      
+      // 1. Primero obtener todos los objetos del cliente para borrar después
+      final colObjetos = db.collection('objetos');
+      final objetosCliente = await colObjetos
+          .find(mongo.where.eq('clienteId', clienteId))
+          .toList();
+      
+      final objetoIds = objetosCliente.map((obj) => obj['_id']).toList();
+
+      // 2. Borrar de la colección 'users' (QRs) usando los objetoIds
+      final colUsers = db.collection('users');
+      for (var objetoId in objetoIds) {
+        await colUsers.deleteMany(
+          mongo.where.eq('objetoId', objetoId)
+        );
+      }
+
+      // 3. Borrar todos los siniestros del cliente
+      final colSiniestros = db.collection('siniestros');
+      await colSiniestros.deleteMany(
+        mongo.where.eq('cliente_id', clienteId)
+      );
+
+      // 4. Borrar todos los objetos del cliente
+      await colObjetos.deleteMany(
+        mongo.where.eq('clienteId', clienteId)
+      );
+
+      // 5. Finalmente borrar el cliente principal
+      final colClientes = db.collection('clientes');
+      await colClientes.deleteOne(mongo.where.id(clienteId));
+
+      if (context.mounted) {
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (_) => AlertDialog(
+            title: const Text("✅ Eliminación Completa"),
+            content: const Text("Cliente y todos sus datos han sido eliminados exitosamente."),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(context); // Cerrar diálogo
+                  Navigator.pop(context); // Volver a pantalla anterior
+                },
+                child: const Text("OK"),
+              )
+            ],
+          ),
+        );
+      }
     } catch (e) {
-      setState(() => error = "Error al eliminar cliente");
+      print("❌ Error en eliminación completa: $e");
+      setState(() => error = "Error al eliminar cliente: $e");
+      
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Error al eliminar: $e"),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     } finally {
       setState(() => loading = false);
     }
@@ -509,8 +581,8 @@ class _EditarClientePageState extends State<EditarClientePage> {
                           padding: const EdgeInsets.symmetric(horizontal: 55, vertical: 16),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                         ),
-                        onPressed: _eliminarCliente,
-                        child: const Text("Eliminar Cliente", style: TextStyle(fontSize: 18, color: Colors.white)),
+                        onPressed: _eliminarClienteCompletamente, // 🔥 Cambiado aquí
+                        child: const Text("ELIMINAR CLIENTE Y TODOS SUS DATOS", style: TextStyle(fontSize: 18, color: Colors.white)),
                       ),
                     ],
                   ),

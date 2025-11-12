@@ -5,10 +5,10 @@ import 'package:flutter/material.dart';
 final _player = AudioPlayer();
 
 void mostrarNotificacionEscaneo(String mensaje) async {
-  // 🔊 reproducir sonido
+  
   await _player.play(AssetSource('notificacion.mp3'));
 
-  // 🔔 mostrar notificación
+  
   showSimpleNotification(
     Text("🔔 $mensaje"),
     background: Colors.blue,

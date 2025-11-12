@@ -1,4 +1,4 @@
-// polling_service.dart
+
 import 'dart:async';
 import 'package:mongo_dart/mongo_dart.dart' as mongo;
 import '../db/mongo_connection.dart';
@@ -9,9 +9,9 @@ class PollingService {
   static Timer? _timer;
   static DateTime? _lastCheck;
 
-  /// Inicia el polling cada [interval] segundos
+  
   static void startPolling({int interval = 10}) {
-    // ✅ Ahora comienza desde el momento actual, no hace 1 hora
+    
     _lastCheck = DateTime.now();
 
     _timer?.cancel();
@@ -22,21 +22,21 @@ class PollingService {
     print("🟢 Polling iniciado (intervalo: ${interval}s)");
   }
 
-  /// Detiene el polling
+  
   static void stopPolling() {
     _timer?.cancel();
     _timer = null;
     print("🔴 Polling detenido");
   }
 
-  /// Verifica actualizaciones en la colección 'siniestros'
+  
   static Future<void> _checkForUpdates() async {
     try {
       final db = await MongoDatabase.connect();
       final siniestrosCol = db.collection('siniestros');
       final clientesCol = db.collection('clientes');
 
-      // ✅ Busca siniestros actualizados después del último check
+      
       final query = mongo.where.gte('updatedAt', _lastCheck!.add(Duration(milliseconds: 1)));
       final results = await siniestrosCol.find(query).toList();
 
@@ -49,7 +49,7 @@ class PollingService {
           String nombre = "Cliente desconocido";
           String cedula = "";
 
-          // 🧩 Convertir y buscar el cliente
+         
           if (clienteId != null) {
             mongo.ObjectId? objectId;
 
@@ -90,7 +90,7 @@ class PollingService {
             }
           }
 
-          // 🔔 Notificar cambio
+          
           final detalle = (cedula.isNotEmpty && cedula != "[dato inválido]")
               ? "📢 $tipo de $nombre (C.I: $cedula) actualizado"
               : "📢 $tipo de $nombre actualizado";
@@ -102,7 +102,7 @@ class PollingService {
         print("⏳ No hay actualizaciones nuevas.");
       }
 
-      // ✅ Actualizar la marca de tiempo después de procesar
+     
       _lastCheck = DateTime.now();
     } catch (e) {
       print("❌ Error en polling: $e");
