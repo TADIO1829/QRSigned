@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:mongo_dart/mongo_dart.dart' as mongo;
+import 'package:qr_flutter/qr_flutter.dart';
 import '../db/mongo_connection.dart';
 import '../utils/crypto_utils.dart';
 import '../cliente_global.dart';
@@ -14,14 +15,16 @@ class VerObjetosPage extends StatefulWidget {
 
 class _VerObjetosPageState extends State<VerObjetosPage> {
   bool loading = true;
-  List<Map<String, dynamic>> objetos = [];
-  List<Map<String, dynamic>> clientes = [];
+  List<Map<String, dynamic>> users = [];
   Timer? _autoRefreshTimer;
 
   @override
   void initState() {
     super.initState();
-    _cargarDatos();
+    print("🚀 INIT VerObjetosPage");
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _cargarDatos();
+    });
     _autoRefreshTimer = Timer.periodic(const Duration(seconds: 10), (_) {
       _cargarDatos(auto: true);
     });
@@ -29,155 +32,376 @@ class _VerObjetosPageState extends State<VerObjetosPage> {
 
   @override
   void dispose() {
+    print("🔚 DISPOSE VerObjetosPage");
     _autoRefreshTimer?.cancel();
     super.dispose();
   }
 
-  // 🔄 NUEVA FUNCIÓN: Leer estado desde users usando objetoId
-  Future<String> _obtenerEstadoDesdeUsers(String objetoIdHex) async {
-    if (objetoIdHex.isEmpty) return 'en_uso';
-    
-    try {
-      final db = await MongoDatabase.connect();
-      final colUsers = db.collection('users');
-      
-      final userDoc = await colUsers.findOne(
-        mongo.where.eq('objetoId', mongo.ObjectId.parse(objetoIdHex)),
-      );
-      
-      return userDoc?['status']?.toString() ?? 'en_uso';
-    } catch (e) {
-      print("❌ Error leyendo estado desde users: $e");
-      return 'en_uso';
-    }
-  }
-
   Future<void> _cargarDatos({bool auto = false}) async {
-    if (!auto) {
+    print("📥 _cargarDatos iniciado, auto: $auto");
+    
+    if (!auto && mounted) {
       setState(() => loading = true);
     }
 
-    final db = await MongoDatabase.connect();
-    final colObjetos = db.collection("objetos");
-    final colClientes = db.collection("clientes");
+    try {
+      final db = await MongoDatabase.connect();
+      final colUsers = db.collection('users');
 
-    final listaClientes = await colClientes.find().toList();
-
-    var query = mongo.where;
-    if (ClienteGlobal.clienteSeleccionado != null) {
-      final clienteSel = ClienteGlobal.clienteSeleccionado!;
-      query = query.eq('clienteId', clienteSel['_id']);
-    }
-
-    final listaObjetos =
-        await colObjetos.find(query.sortBy('_id', descending: true)).toList();
-
-    // 🔄 ACTUALIZACIÓN: Obtener estado desde users para cada objeto
-    for (var obj in listaObjetos) {
-      final objetoId = obj["_id"];
-      if (objetoId != null) {
-        final objetoIdHex = _objetoIdHex(objetoId);
-        final estadoDesdeUsers = await _obtenerEstadoDesdeUsers(objetoIdHex);
-        obj["estado"] = estadoDesdeUsers; // 👈 Sobrescribir con estado de users
+      var query = mongo.where;
+      
+      if (ClienteGlobal.clienteSeleccionado != null) {
+        final clienteSel = ClienteGlobal.clienteSeleccionado!;
+        query = query.eq('clienteId', clienteSel['_id']);
       }
-    }
 
-    if (mounted) {
-      setState(() {
-        clientes = listaClientes;
-        objetos = listaObjetos;
-        loading = false;
-      });
+      final listaUsers = await colUsers.find(
+        query.sortBy('_id', descending: true)
+      ).toList();
+
+      print("📊 Total de usuarios/objetos cargados: ${listaUsers.length}");
+
+      if (mounted) {
+        setState(() {
+          users = listaUsers;
+          loading = false;
+        });
+        print("✅ Estado actualizado correctamente");
+      } else {
+        print("⚠️ Widget no montado, no se actualiza estado");
+      }
+    } catch (e, stack) {
+      print("❌ Error crítico en _cargarDatos: $e");
+      print("📝 Stack: $stack");
+      if (mounted) {
+        setState(() => loading = false);
+        _mostrarError("Error cargando datos: $e");
+      }
     }
   }
 
-  // 🔄 FUNCIÓN AUXILIAR: Convertir ObjectId a hex string
   String _objetoIdHex(dynamic objId) {
     if (objId is mongo.ObjectId) return objId.oid;
     return objId?.toString() ?? '';
   }
 
-  String _nombreCliente(mongo.ObjectId id) {
-    final c = clientes.firstWhere(
-      (x) => x["_id"] == id,
-      orElse: () => {},
+  String _generarUrlQR(Map<String, dynamic> user) {
+    try {
+      final qrToken = user['qrToken']?.toString();
+      
+      if (qrToken == null || qrToken.isEmpty) {
+        throw Exception("No se encontró qrToken");
+      }
+      
+      final url = "http://localhost:3000/qr/form/$qrToken";
+      print("✅ URL QR generada: $url");
+      return url;
+    } catch (e) {
+      print("❌ Error en _generarUrlQR: $e");
+      rethrow;
+    }
+  }
+
+  void _mostrarQR(Map<String, dynamic> user) {
+    print("🎯 _mostrarQR iniciado para: ${user['name']}");
+    
+    try {
+      final name = user["name"]?.toString() ?? "Sin nombre";
+      final object = user["object"]?.toString() ?? "Sin descripción";
+      final status = user["status"]?.toString() ?? "en_uso";
+      final qrToken = user['qrToken']?.toString() ?? 'No disponible';
+
+      final urlQR = _generarUrlQR(user);
+
+      showDialog(
+        context: context,
+        barrierDismissible: true,
+        builder: (context) => AlertDialog(
+          title: const Row(
+            children: [
+              Icon(Icons.qr_code_2, color: Colors.green),
+              SizedBox(width: 8),
+              Text("Código QR"),
+            ],
+          ),
+          content: Container(
+            width: double.maxFinite,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  name,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  object,
+                  style: TextStyle(
+                    color: Colors.grey.shade600,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  "Estado: $status",
+                  style: TextStyle(
+                    color: _colorEstado(status),
+                    fontWeight: FontWeight.bold,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 20),
+                
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.green.shade300, width: 2),
+                    borderRadius: BorderRadius.circular(12),
+                    color: Colors.white,
+                  ),
+                  child: QrImageView(
+                    data: urlQR,
+                    version: QrVersions.auto,
+                    size: 200.0,
+                    backgroundColor: Colors.white,
+                  ),
+                ),
+                
+                const SizedBox(height: 16),
+                _buildInfoContainer(urlQR, qrToken),
+                const SizedBox(height: 12),
+                
+                const Text(
+                  "📱 Escanea este código QR",
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.green,
+                    fontStyle: FontStyle.italic,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text("Cerrar"),
+            ),
+          ],
+        ),
+      );
+      
+    } catch (e, stack) {
+      print("💥 ERROR en _mostrarQR: $e");
+      print("📝 Stack: $stack");
+      _mostrarError("Error al mostrar QR: ${e.toString()}");
+    }
+  }
+
+  Widget _buildInfoContainer(String urlQR, String qrToken) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade100,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Text(
+            "URL del QR:",
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 12,
+            ),
+          ),
+          const SizedBox(height: 4),
+          SelectableText(
+            urlQR,
+            style: const TextStyle(
+              fontFamily: 'Monospace',
+              fontSize: 10,
+              color: Colors.blue,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            "Token QR:",
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 12,
+            ),
+          ),
+          const SizedBox(height: 4),
+          SelectableText(
+            qrToken.length > 30 ? "${qrToken.substring(0, 30)}..." : qrToken,
+            style: const TextStyle(
+              fontFamily: 'Monospace',
+              fontSize: 10,
+              color: Colors.green,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
     );
-    if (c.isEmpty) return "Cliente no encontrado";
-    final nombre = (c["nombre"] ?? "").toString();
-    final cedula = (c["cedula"] != null)
-        ? CryptoUtils.decryptText(c["cedula"])
-        : "N/A";
-    return "$nombre ($cedula)";
+  }
+
+  Widget _buildInfoItem(String titulo, String valor, IconData icono, {Color? color}) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icono, size: 20, color: color ?? Colors.grey),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  titulo,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12,
+                    color: Colors.grey,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                SelectableText(
+                  valor,
+                  style: const TextStyle(fontSize: 14),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _mostrarError(String mensaje) {
+    print("🛑 Mostrando error: $mensaje");
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(mensaje),
+        backgroundColor: Colors.red,
+        duration: const Duration(seconds: 3),
+      ),
+    );
+  }
+
+  void _mostrarInfoUser(Map<String, dynamic> user) {
+    print("ℹ️ _mostrarInfoUser para: ${user['name']}");
+    
+    try {
+      final name = user["name"]?.toString() ?? "Sin nombre";
+      final email = user["email"]?.toString() ?? "Sin email";
+      final object = user["object"]?.toString() ?? "Sin descripción";
+      final status = user["status"]?.toString() ?? "en_uso";
+      final qrToken = user['qrToken']?.toString() ?? 'No disponible';
+      final qrUrl = user['qrUrl']?.toString() ?? 'No disponible';
+      final objetoId = user['objetoId'];
+      final objetoIdHex = objetoId != null ? _objetoIdHex(objetoId) : 'No asignado';
+
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text("📋 Información Completa"),
+          content: Container(
+            width: double.maxFinite,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _buildInfoItem("Nombre", name, Icons.person),
+                _buildInfoItem("Email", email, Icons.email),
+                _buildInfoItem("Objeto", object, Icons.description),
+                _buildInfoItem("Estado", status, Icons.circle, color: _colorEstado(status)),
+                _buildInfoItem("ID Objeto", objetoIdHex, Icons.fingerprint),
+                _buildInfoItem("Token QR", qrToken, Icons.qr_code_2),
+                _buildInfoItem("URL QR", qrUrl, Icons.link),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text("Cerrar"),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(context);
+                _mostrarQR(user);
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.green,
+                foregroundColor: Colors.white,
+              ),
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.qr_code_2),
+                  SizedBox(width: 8),
+                  Text("Mostrar QR"),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    } catch (e) {
+      print("❌ Error en _mostrarInfoUser: $e");
+      _mostrarError("Error al mostrar información: $e");
+    }
   }
 
   Color _colorEstado(String estado) {
     switch (estado) {
-      case "en_siniestro":
-        return Colors.orange.shade700;
-      case "disponible":
-        return Colors.green.shade700;
-      case "inactivo":
-        return Colors.grey.shade700;
-      case "pendiente":
-        return Colors.amber.shade700;
+      case "en_siniestro": return Colors.orange.shade700;
+      case "disponible": return Colors.green.shade700;
+      case "inactivo": return Colors.grey.shade700;
+      case "pendiente": return Colors.amber.shade700;
       case "robado":
       case "perdido":
-      case "en_reparacion":
-        return Colors.red.shade700;
-      case "en_uso":
-        return Colors.blue.shade700;
-      case "en_venta":
-        return Colors.purple.shade700;
-      case "prestado":
-        return Colors.cyan.shade700;
-      case "encontrado":
-        return Colors.green.shade700;
-      default:
-        return Colors.blueGrey;
+      case "en_reparacion": return Colors.red.shade700;
+      case "en_uso": return Colors.blue.shade700;
+      case "en_venta": return Colors.purple.shade700;
+      case "prestado": return Colors.cyan.shade700;
+      case "encontrado": return Colors.green.shade700;
+      default: return Colors.blueGrey;
     }
   }
 
-  Widget _detalleObjeto(Map<String, dynamic> obj) {
-    final tipo = (obj["tipo"] ?? "").toString();
-    final descripcion = (obj["descripcion"] ?? "").toString();
-    final estado = (obj["estado"] ?? "").toString();
-    final marca = (obj["marca"] ?? "").toString();
-    final modelo = (obj["modelo"] ?? "").toString();
-    final color = (obj["color"] ?? "").toString();
-    final anio = (obj["anio"] ?? "").toString();
-    final otro = (obj["otroDetalle"] ?? "").toString();
-
-    List<Widget> info = [
-      Text("Descripción: $descripcion"),
-      Text("Tipo: $tipo"),
-      Text("Estado QR: $estado", // 👈 Cambié el texto para claridad
-          style: TextStyle(
-              color: _colorEstado(estado), fontWeight: FontWeight.bold)),
-    ];
-
-    if (tipo == "carro") {
-      if (marca.isNotEmpty) info.add(Text("Marca: $marca"));
-      if (modelo.isNotEmpty) info.add(Text("Modelo: $modelo"));
-      if (anio.isNotEmpty) info.add(Text("Año: $anio"));
-      if (color.isNotEmpty) info.add(Text("Color: $color"));
-    } else if (tipo == "objeto") {
-      if (marca.isNotEmpty) info.add(Text("Marca: $marca"));
-      if (modelo.isNotEmpty) info.add(Text("Modelo: $modelo"));
-    } else if (tipo == "mascota") {
-      if (color.isNotEmpty) info.add(Text("Color: $color"));
-      if (otro.isNotEmpty) info.add(Text("Nombre: $otro"));
-    } else if (otro.isNotEmpty) {
-      info.add(Text("Detalle: $otro"));
-    }
+  Widget _detalleUser(Map<String, dynamic> user) {
+    final name = user["name"]?.toString() ?? "";
+    final object = user["object"]?.toString() ?? "";
+    final status = user["status"]?.toString() ?? "";
+    final email = user["email"]?.toString() ?? "";
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
-      children: info,
+      children: [
+        Text("Nombre: $name"),
+        Text("Objeto: $object"),
+        Text("Email: $email"),
+        Text("Estado: $status", style: TextStyle(
+          color: _colorEstado(status), 
+          fontWeight: FontWeight.bold
+        )),
+      ],
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    print("🔄 BUILD ejecutado, loading: $loading, users: ${users.length}");
+    
     const fondo = Color(0xFF23272F);
     const azul = Color(0xFF4D82BC);
 
@@ -187,7 +411,7 @@ class _VerObjetosPageState extends State<VerObjetosPage> {
       backgroundColor: fondo,
       appBar: AppBar(
         title: Text(clienteActivo == null
-            ? "Objetos Registrados"
+            ? "Todos los Objetos Registrados"
             : "Objetos de ${clienteActivo['nombre']}"),
         backgroundColor: azul,
         actions: [
@@ -200,53 +424,86 @@ class _VerObjetosPageState extends State<VerObjetosPage> {
       ),
       body: loading
           ? const Center(child: CircularProgressIndicator())
-          : objetos.isEmpty
+          : users.isEmpty
               ? const Center(
                   child: Text(
                     "No hay objetos registrados.",
                     style: TextStyle(color: Colors.white70, fontSize: 18),
                   ),
                 )
-              : Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: ListView.builder(
-                    itemCount: objetos.length,
-                    itemBuilder: (context, i) {
-                      final obj = objetos[i];
-                      final clienteId = obj["clienteId"];
-                      final cliente = clienteId is mongo.ObjectId
-                          ? _nombreCliente(clienteId)
-                          : "Cliente desconocido";
+              : _buildListaUsers(),
+    );
+  }
 
-                      return Card(
-                        elevation: 6,
-                        margin: const EdgeInsets.symmetric(vertical: 10),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                        child: Padding(
-                          padding: const EdgeInsets.all(16),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                cliente,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 16,
-                                  color: azul,
-                                ),
-                              ),
-                              const SizedBox(height: 6),
-                              _detalleObjeto(obj),
-                              
-                            ],
+  Widget _buildListaUsers() {
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: ListView.builder(
+        itemCount: users.length,
+        itemBuilder: (context, i) {
+          final user = users[i];
+          final name = user["name"]?.toString() ?? "Sin nombre";
+
+          print("📦 Construyendo item $i: $name");
+
+          return Card(
+            elevation: 6,
+            margin: const EdgeInsets.symmetric(vertical: 10),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    name,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                      color: Color(0xFF4D82BC),
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  _detalleUser(user),
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          onPressed: () {
+                            print("🔄 Botón Info presionado");
+                            _mostrarInfoUser(user);
+                          },
+                          icon: const Icon(Icons.visibility),
+                          label: const Text("Información"),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.blue,
+                            foregroundColor: Colors.white,
                           ),
                         ),
-                      );
-                    },
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          onPressed: () {
+                            print("🔄 Botón QR presionado");
+                            _mostrarQR(user);
+                          },
+                          icon: const Icon(Icons.qr_code_2),
+                          label: const Text("Mostrar QR"),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.green,
+                            foregroundColor: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
     );
   }
 }
