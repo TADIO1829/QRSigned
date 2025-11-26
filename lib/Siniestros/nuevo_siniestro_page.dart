@@ -50,10 +50,14 @@ class _NuevoSiniestroPageState extends State<NuevoSiniestroPage> {
 
     setState(() {
       clientes = resultados.cast<Map<String, dynamic>>();
-      // Si hay un cliente global seleccionado, úsalo; si no, el primero
-      clienteSeleccionado =
-          ClienteGlobal.seleccionado ?? (clientes.isNotEmpty ? clientes.first : null);
-      clienteIdSeleccionado = clienteSeleccionado?['_id'];
+      
+      if (ClienteGlobal.seleccionado != null) {
+        clienteSeleccionado = ClienteGlobal.seleccionado;
+        clienteIdSeleccionado = clienteSeleccionado?['_id'];
+      } else {
+        clienteSeleccionado = clientes.isNotEmpty ? clientes.first : null;
+        clienteIdSeleccionado = clienteSeleccionado?['_id'];
+      }
     });
 
     await _cargarObjetos();
@@ -61,9 +65,11 @@ class _NuevoSiniestroPageState extends State<NuevoSiniestroPage> {
 
   Future<void> _cargarObjetos() async {
     if (clienteSeleccionado == null) return;
+    
     final db = await MongoDatabase.connect();
     final col = db.collection("objetos");
     final res = await col.find(mongo.where.eq("clienteId", clienteSeleccionado!["_id"])).toList();
+    
     setState(() {
       objetos = res.cast<Map<String, dynamic>>();
       objetoSeleccionado = objetos.isNotEmpty ? objetos.first : null;
@@ -111,19 +117,15 @@ class _NuevoSiniestroPageState extends State<NuevoSiniestroPage> {
     try {
       final tipoObjeto = (objetoSeleccionado!["tipo"] ?? "").toString().toLowerCase();
 
-      // Formato de siniestro compatible con VerSiniestrosPage
       final siniestro = {
         "cliente_id": clienteSeleccionado!["_id"],
         "objeto_id": objetoSeleccionado!["_id"],
-        // usa el tipo del objeto (mascota/carros/objeto/otro)
         "tipo": tipoObjeto.isNotEmpty ? tipoObjeto : "otro",
         "descripcion": descripcionController.text.trim(),
         "lugar": lugarController.text.trim(),
         "fecha": fechaController.text.trim(),
         "hora": horaController.text.trim(),
-        // estado inicial del siniestro (abierto) — en tu vista puedes mostrar 'abierto'/'cerrado'
         "estado": "abierto",
-        // seguimiento vacío pero insertamos un seguimiento inicial
         "seguimiento": [
           {
             "fecha": DateTime.now().toIso8601String(),
@@ -139,17 +141,14 @@ class _NuevoSiniestroPageState extends State<NuevoSiniestroPage> {
       final col = db.collection("siniestros");
       await col.insertOne(siniestro);
 
-      // Actualiza el status en users (QR) a un estado acorde al tipo
       final users = db.collection("users");
-      final nuevoStatusForUsers = (tipoObjeto == "mascota") ? "sin_novedad" : "en_uso";
-      // Para coherencia con comportamiento previo, ponemos status "en_uso" o "sin_novedad"
-      // pero también marcamos el objeto como 'en_siniestro' en collection objetos:
+      final nuevoStatusForUsers = (tipoObjeto == "mascota") ? "perdida" : "perdido";
+      
       await users.updateMany(
         mongo.where.eq("objetoId", objetoSeleccionado!["_id"]),
         mongo.modify.set("status", nuevoStatusForUsers),
       );
 
-      // Actualiza el estado operativo del objeto a 'en_siniestro'
       final objetosCol = db.collection("objetos");
       await objetosCol.updateOne(
         mongo.where.id(objetoSeleccionado!["_id"]),
@@ -157,24 +156,21 @@ class _NuevoSiniestroPageState extends State<NuevoSiniestroPage> {
       );
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("✅ Siniestro guardado correctamente.")),
+        const SnackBar(content: Text("Siniestro guardado correctamente.")),
       );
 
-      // Limpia formulario
-      _formKey.currentState!.reset();
       descripcionController.clear();
       lugarController.clear();
       horaController.clear();
       fechaController.text = DateTime.now().toIso8601String().split("T")[0];
 
-      // recarga objetos por si quieres mantener el dropdown actualizado
       await _cargarObjetos();
 
       setState(() {
-        // dejar el primer objeto seleccionado si existe
         objetoSeleccionado = objetos.isNotEmpty ? objetos.first : null;
       });
     } catch (e) {
+      print("Error al guardar siniestro: $e");
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("Error al guardar siniestro: $e")),
       );
@@ -185,7 +181,11 @@ class _NuevoSiniestroPageState extends State<NuevoSiniestroPage> {
 
   Widget _fichaObjeto() {
     if (objetoSeleccionado == null) {
-      return const Text("Selecciona un objeto para ver detalles.");
+      return const Padding(
+        padding: EdgeInsets.only(top: 8),
+        child: Text("Selecciona un objeto para ver detalles.", 
+              style: TextStyle(color: Colors.grey)),
+      );
     }
 
     final tipo = (objetoSeleccionado!["tipo"] ?? "").toString();
@@ -197,9 +197,10 @@ class _NuevoSiniestroPageState extends State<NuevoSiniestroPage> {
     final otroDetalle = (objetoSeleccionado!["otroDetalle"] ?? "").toString();
 
     List<Widget> detalles = [
-      Text("Tipo: $tipo"),
+      Text("Tipo: $tipo", style: const TextStyle(fontWeight: FontWeight.bold)),
       if (descripcion.isNotEmpty) Text("Descripción: $descripcion"),
     ];
+    
     if (tipo == "carro") {
       if (marca.isNotEmpty) detalles.add(Text("Marca: $marca"));
       if (modelo.isNotEmpty) detalles.add(Text("Modelo: $modelo"));
@@ -211,15 +212,21 @@ class _NuevoSiniestroPageState extends State<NuevoSiniestroPage> {
     } else if (tipo == "otro") {
       if (otroDetalle.isNotEmpty) detalles.add(Text("Detalle: $otroDetalle"));
     } else if (tipo == "mascota") {
-      detalles.add(const Text("Estado inicial: Sin Novedad"));
+      detalles.add(const Text("Estado inicial: Sin Novedad", 
+                style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold)));
     }
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const SizedBox(height: 6),
-        ...detalles,
-      ],
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text("Detalles del objeto:", 
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+          const SizedBox(height: 4),
+          ...detalles,
+        ],
+      ),
     );
   }
 
@@ -263,8 +270,6 @@ class _NuevoSiniestroPageState extends State<NuevoSiniestroPage> {
                           textAlign: TextAlign.center,
                         ),
                         const SizedBox(height: 20),
-
-                        // --- Cliente ---
                         Card(
                           elevation: 4,
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -281,30 +286,52 @@ class _NuevoSiniestroPageState extends State<NuevoSiniestroPage> {
                                   items: clientes.map((cliente) {
                                     final ced = (cliente["cedula"] ?? '').toString();
                                     final nombre = (cliente["nombre"] ?? '').toString();
+                                    final cedulaDecrypt = CryptoUtils.decryptText(ced);
                                     return DropdownMenuItem<mongo.ObjectId>(
                                       value: cliente["_id"] as mongo.ObjectId,
-                                      child: Text("$nombre (${CryptoUtils.decryptText(ced)})"),
+                                      child: Text("$nombre ($cedulaDecrypt)"),
                                     );
                                   }).toList(),
-                                  onChanged: ClienteGlobal.seleccionado != null
+                                  onChanged: (ClienteGlobal.seleccionado != null && clientes.length > 1) 
                                       ? null
                                       : (mongo.ObjectId? nuevoId) {
-                                          setState(() {
-                                            clienteIdSeleccionado = nuevoId;
-                                            clienteSeleccionado = clientes.firstWhere((c) => c["_id"] == nuevoId);
-                                          });
-                                          _cargarObjetos();
+                                          if (nuevoId != null) {
+                                            setState(() {
+                                              clienteIdSeleccionado = nuevoId;
+                                              clienteSeleccionado = clientes.firstWhere((c) => c["_id"] == nuevoId);
+                                            });
+                                            _cargarObjetos();
+                                          }
                                         },
+                                  decoration: InputDecoration(
+                                    hintText: "Selecciona un cliente",
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                  ),
+                                  hint: ClienteGlobal.seleccionado != null 
+                                      ? const Text("Cliente pre-seleccionado", 
+                                          style: TextStyle(color: Colors.green))
+                                      : const Text("Selecciona un cliente"),
                                   validator: (v) => v == null ? "Selecciona un cliente" : null,
                                 ),
+                                if (ClienteGlobal.seleccionado != null)
+                                  Padding(
+                                    padding: const EdgeInsets.only(top: 8),
+                                    child: Text(
+                                      "Usando cliente seleccionado anteriormente",
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: Colors.green.shade700,
+                                        fontStyle: FontStyle.italic,
+                                      ),
+                                    ),
+                                  ),
                               ],
                             ),
                           ),
                         ),
-
                         const SizedBox(height: 13),
-
-                        // --- Objeto vinculado ---
                         Card(
                           elevation: 4,
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -325,6 +352,12 @@ class _NuevoSiniestroPageState extends State<NuevoSiniestroPage> {
                                     );
                                   }).toList(),
                                   onChanged: (val) => setState(() => objetoSeleccionado = val),
+                                  decoration: InputDecoration(
+                                    hintText: "Selecciona un objeto",
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                  ),
                                   validator: (v) => v == null ? "Selecciona un objeto" : null,
                                 ),
                                 _fichaObjeto(),
@@ -332,10 +365,7 @@ class _NuevoSiniestroPageState extends State<NuevoSiniestroPage> {
                             ),
                           ),
                         ),
-
                         const SizedBox(height: 13),
-
-                        // --- Detalles ---
                         Card(
                           elevation: 4,
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -351,7 +381,11 @@ class _NuevoSiniestroPageState extends State<NuevoSiniestroPage> {
                                   controller: fechaController,
                                   readOnly: true,
                                   onTap: _selectFecha,
-                                  decoration: const InputDecoration(labelText: "Fecha *", suffixIcon: Icon(Icons.calendar_today)),
+                                  decoration: const InputDecoration(
+                                    labelText: "Fecha *", 
+                                    suffixIcon: Icon(Icons.calendar_today),
+                                    border: OutlineInputBorder(),
+                                  ),
                                   validator: (v) => v == null || v.isEmpty ? "Campo obligatorio" : null,
                                 ),
                                 const SizedBox(height: 10),
@@ -359,27 +393,37 @@ class _NuevoSiniestroPageState extends State<NuevoSiniestroPage> {
                                   controller: horaController,
                                   readOnly: true,
                                   onTap: _selectHora,
-                                  decoration: const InputDecoration(labelText: "Hora *", suffixIcon: Icon(Icons.access_time)),
+                                  decoration: const InputDecoration(
+                                    labelText: "Hora *", 
+                                    suffixIcon: Icon(Icons.access_time),
+                                    border: OutlineInputBorder(),
+                                  ),
                                   validator: (v) => v == null || v.isEmpty ? "Campo obligatorio" : null,
                                 ),
                                 const SizedBox(height: 10),
                                 TextFormField(
                                   controller: lugarController,
-                                  decoration: const InputDecoration(labelText: "Lugar *"),
+                                  decoration: const InputDecoration(
+                                    labelText: "Lugar *",
+                                    border: OutlineInputBorder(),
+                                  ),
                                   validator: (v) => v == null || v.isEmpty ? "Campo obligatorio" : null,
                                 ),
                                 const SizedBox(height: 10),
                                 TextFormField(
                                   controller: descripcionController,
                                   maxLines: 4,
-                                  decoration: const InputDecoration(labelText: "Descripción *"),
+                                  decoration: const InputDecoration(
+                                    labelText: "Descripción *",
+                                    border: OutlineInputBorder(),
+                                    alignLabelWithHint: true,
+                                  ),
                                   validator: (v) => v == null || v.isEmpty ? "Campo obligatorio" : null,
                                 ),
                               ],
                             ),
                           ),
                         ),
-
                         const SizedBox(height: 18),
                         loading
                             ? const Center(child: CircularProgressIndicator())

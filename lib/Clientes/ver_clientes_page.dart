@@ -363,30 +363,33 @@ class _VerClientesPageState extends State<VerClientesPage> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.end,
                           children: [
-                            OutlinedButton.icon(
-                              icon: const Icon(Icons.edit,
-                                  color: Color(0xFF4D82BC)),
-                              label: const Text("Editar",
-                                  style: TextStyle(color: Color(0xFF4D82BC))),
-                              style: OutlinedButton.styleFrom(
-                                side: const BorderSide(
-                                    color: Color(0xFF4D82BC), width: 1.3),
-                                shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(8)),
+                            // 🔥 SOLO MOSTRAR BOTÓN EDITAR SI ES ADMIN
+                            if (UsuarioGlobal.esAdmin) ...[
+                              OutlinedButton.icon(
+                                icon: const Icon(Icons.edit,
+                                    color: Color(0xFF4D82BC)),
+                                label: const Text("Editar",
+                                    style: TextStyle(color: Color(0xFF4D82BC))),
+                                style: OutlinedButton.styleFrom(
+                                  side: const BorderSide(
+                                      color: Color(0xFF4D82BC), width: 1.3),
+                                  shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(8)),
+                                ),
+                                onPressed: () async {
+                                  final cliente = filtrados[seleccionado!];
+                                  final actualizado = await Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) =>
+                                          EditarClientePage(cliente: cliente),
+                                    ),
+                                  );
+                                  if (actualizado == true) cargarClientes();
+                                },
                               ),
-                              onPressed: () async {
-                                final cliente = filtrados[seleccionado!];
-                                final actualizado = await Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) =>
-                                        EditarClientePage(cliente: cliente),
-                                  ),
-                                );
-                                if (actualizado == true) cargarClientes();
-                              },
-                            ),
-                            const SizedBox(width: 12),
+                              const SizedBox(width: 12),
+                            ],
                             ElevatedButton.icon(
                               icon: const Icon(Icons.check_circle_outline),
                               label: const Text("Seleccionar"),
