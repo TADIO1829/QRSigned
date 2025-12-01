@@ -1,0 +1,39 @@
+╔══════════════════════════════════════════════╗
+║           REPORTE REAL DE PRUEBAS            ║
+║                  QRSIGNED                    ║
+╠══════════════════════════════════════════════╣
+║ FECHA: 2025-11-28 22:28                ║
+╠══════════════════════════════════════════════╣
+║           RESULTADOS EJECUTADOS              ║
+╠══════════════════════════════════════════════╣
+║ 🧪 TOTAL PRUEBAS: 0                              ║
+║ ✅ PRUEBAS EXITOSAS: 0                              ║
+║ ❌ PRUEBAS FALLIDAS: 0                              ║
+║ 📈 TASA DE ÉXITO: NaN%                           ║
+╠══════════════════════════════════════════════╣
+║             DESGLOSE REAL                    ║
+╠══════════════════════════════════════════════╣
+║ ✅ 🔐 Pruebas de Login: 2/2 (100%)
+║                                                   ║
+║ ✅ ✅ Pruebas MainMenu: 4/4 (100%)
+║                                                   ║
+
+╠══════════════════════════════════════════════╣
+║                 DETALLE                      ║
+╚══════════════════════════════════════════════╝
+
+📂 GRUPO: 🔐 Pruebas de Login
+──────────────────────────────────────────────────
+  ✅ PASÓ - Login básico - solo UI
+  ✅ PASÓ - Login admin - sin diálogo
+
+📂 GRUPO: ✅ Pruebas MainMenu
+──────────────────────────────────────────────────
+  ✅ PASÓ - Renderiza elementos principales
+  ✅ PASÓ - Expande menú Clientes y muestra opciones
+  ✅ PASÓ - Expande menú Siniestros y muestra opciones
+  ✅ PASÓ - Botones son interactivos sin errores
+
+
+
+🎉 TODAS LAS PRUEBAS PASARON - SISTEMA ESTABLE
