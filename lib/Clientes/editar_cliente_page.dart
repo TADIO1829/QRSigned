@@ -23,14 +23,14 @@ class _EditarClientePageState extends State<EditarClientePage> {
   bool loading = false;
   String error = "";
 
-  // Vehículos
+  
   List<List<TextEditingController>> carrosControllers = [];
 
-  // Mascotas y objetos
+ 
   List<Map<String, TextEditingController>> mascotasControllers = [];
   List<Map<String, TextEditingController>> objetosControllers = [];
 
-  // Contactos
+  
   List<TextEditingController> contactoNombre = List.generate(3, (_) => TextEditingController());
   List<TextEditingController> contactoTelefono = List.generate(3, (_) => TextEditingController());
   List<TextEditingController> contactoRelacion = List.generate(3, (_) => TextEditingController());
@@ -45,10 +45,10 @@ class _EditarClientePageState extends State<EditarClientePage> {
     }
   }
 
-  // CORREGIDO: Función simplificada para encriptar
+  
   String safeEncrypt(String text) {
     if (text.isEmpty) return '';
-    // Siempre encriptar el texto, sin verificar si ya está encriptado
+    
     return CryptoUtils.encryptText(text);
   }
 
@@ -77,10 +77,10 @@ class _EditarClientePageState extends State<EditarClientePage> {
     direccionController.text = safeDecrypt(cli['direccion']);
     telefonoController.text = safeDecrypt(cli['telefono']);
     
-    // Mapear el valor de la póliza
+    
     polizaSeleccionada = _mapearPoliza(cli['poliza']);
 
-    // Vehículos
+    
     final mats = (cli['matriculas'] as List?) ?? [];
     carrosControllers = mats.map((m) {
       return [
@@ -92,7 +92,7 @@ class _EditarClientePageState extends State<EditarClientePage> {
       ];
     }).toList();
 
-    // Mascotas
+    
     final mascotas = (cli['mascotas'] as List?) ?? [];
     mascotasControllers = mascotas.map((m) {
       return {
@@ -104,7 +104,7 @@ class _EditarClientePageState extends State<EditarClientePage> {
       };
     }).toList();
 
-    // Objetos
+   
     final objetos = (cli['objetos'] as List?) ?? [];
     objetosControllers = objetos.map((o) {
       return {
@@ -115,7 +115,7 @@ class _EditarClientePageState extends State<EditarClientePage> {
       };
     }).toList();
 
-    // Contactos
+    
     final contactos = (cli['contactos'] as List?) ?? [];
     for (int i = 0; i < 3; i++) {
       if (i < contactos.length) {
@@ -251,12 +251,13 @@ class _EditarClientePageState extends State<EditarClientePage> {
     }
   }
 
-  // 🔥 NUEVA FUNCIÓN: Eliminar todo relacionado con el cliente
+  
+
   Future<void> _eliminarClienteCompletamente() async {
     final confirmar = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text("⚠️ ELIMINACIÓN COMPLETA"),
+        title: const Text(" ELIMINACIÓN COMPLETA"),
         content: const Text(
           "¿Estás SEGURO de eliminar este cliente y TODOS sus datos?\n\n"
           "Esto borrará:\n"
@@ -288,7 +289,7 @@ class _EditarClientePageState extends State<EditarClientePage> {
       final db = await MongoDatabase.connect();
       final clienteId = widget.cliente['_id'];
       
-      // 1. Primero obtener todos los objetos del cliente para borrar después
+     
       final colObjetos = db.collection('objetos');
       final objetosCliente = await colObjetos
           .find(mongo.where.eq('clienteId', clienteId))
@@ -296,7 +297,7 @@ class _EditarClientePageState extends State<EditarClientePage> {
       
       final objetoIds = objetosCliente.map((obj) => obj['_id']).toList();
 
-      // 2. Borrar de la colección 'users' (QRs) usando los objetoIds
+      
       final colUsers = db.collection('users');
       for (var objetoId in objetoIds) {
         await colUsers.deleteMany(
@@ -304,18 +305,18 @@ class _EditarClientePageState extends State<EditarClientePage> {
         );
       }
 
-      // 3. Borrar todos los siniestros del cliente
+   
       final colSiniestros = db.collection('siniestros');
       await colSiniestros.deleteMany(
         mongo.where.eq('cliente_id', clienteId)
       );
 
-      // 4. Borrar todos los objetos del cliente
+    
       await colObjetos.deleteMany(
         mongo.where.eq('clienteId', clienteId)
       );
 
-      // 5. Finalmente borrar el cliente principal
+      
       final colClientes = db.collection('clientes');
       await colClientes.deleteOne(mongo.where.id(clienteId));
 
@@ -324,13 +325,13 @@ class _EditarClientePageState extends State<EditarClientePage> {
           context: context,
           barrierDismissible: false,
           builder: (_) => AlertDialog(
-            title: const Text("✅ Eliminación Completa"),
+            title: const Text("  Eliminación Completa"),
             content: const Text("Cliente y todos sus datos han sido eliminados exitosamente."),
             actions: [
               TextButton(
                 onPressed: () {
-                  Navigator.pop(context); // Cerrar diálogo
-                  Navigator.pop(context); // Volver a pantalla anterior
+                  Navigator.pop(context); 
+                  Navigator.pop(context); 
                 },
                 child: const Text("OK"),
               )
@@ -339,7 +340,7 @@ class _EditarClientePageState extends State<EditarClientePage> {
         );
       }
     } catch (e) {
-      print("❌ Error en eliminación completa: $e");
+      print(" Error en eliminación completa: $e");
       setState(() => error = "Error al eliminar cliente: $e");
       
       if (context.mounted) {
@@ -411,7 +412,7 @@ class _EditarClientePageState extends State<EditarClientePage> {
                       ),
                       const SizedBox(height: 20),
 
-                      // ==== DATOS PERSONALES ====
+                     
                       _card("Datos personales 👤", azulClaro, [
                         _input(nombreController, "Nombre"),
                         _input(cedulaController, "Cédula"),
@@ -432,7 +433,7 @@ class _EditarClientePageState extends State<EditarClientePage> {
 
                       const SizedBox(height: 20),
 
-                      // ==== VEHÍCULOS ====
+                      
                       _card("Vehículos 🚗", azulClaro, [
                         ...List.generate(carrosControllers.length, (i) {
                           final c = carrosControllers[i];
@@ -471,7 +472,7 @@ class _EditarClientePageState extends State<EditarClientePage> {
 
                       const SizedBox(height: 20),
 
-                      // ==== MASCOTAS ====
+                      
                       _card("Mascotas 🐾", azulClaro, [
                         ...List.generate(mascotasControllers.length, (i) {
                           final m = mascotasControllers[i];
@@ -509,7 +510,7 @@ class _EditarClientePageState extends State<EditarClientePage> {
 
                       const SizedBox(height: 20),
 
-                      // ==== OBJETOS ====
+                      
                       _card("Objetos personales 📦", azulClaro, [
                         ...List.generate(objetosControllers.length, (i) {
                           final o = objetosControllers[i];
@@ -546,7 +547,7 @@ class _EditarClientePageState extends State<EditarClientePage> {
 
                       const SizedBox(height: 20),
 
-                      // ==== CONTACTOS ====
+                     
                       _card("Contactos alternativos ☎️", azulClaro, [
                         ...List.generate(3, (i) {
                           return Row(
@@ -581,7 +582,7 @@ class _EditarClientePageState extends State<EditarClientePage> {
                           padding: const EdgeInsets.symmetric(horizontal: 55, vertical: 16),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                         ),
-                        onPressed: _eliminarClienteCompletamente, // 🔥 Cambiado aquí
+                        onPressed: _eliminarClienteCompletamente, 
                         child: const Text("ELIMINAR CLIENTE Y TODOS SUS DATOS", style: TextStyle(fontSize: 18, color: Colors.white)),
                       ),
                     ],

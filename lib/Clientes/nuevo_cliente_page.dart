@@ -38,32 +38,32 @@ class _NuevoClientePageState extends State<NuevoClientePage> {
   Timer? _debounceCedula;
   Timer? _debounceTelefono;
 
-  // ====== Seguridad ======
+  
   final respuestaSeguridadController = TextEditingController();
   String? preguntaSeguridadSeleccionada;
 
-  // ====== Imágenes ======
+ 
   File? imagenSeleccionada1;
   File? imagenSeleccionada2;
   String? nombreImagenGuardada1;
   String? nombreImagenGuardada2;
 
-  // ====== Vehículos ======
+ 
   int numCarros = 0;
-  List<List<TextEditingController>> carrosControllers = []; // [matr, color, marca, modelo, anio]
+  List<List<TextEditingController>> carrosControllers = []; 
   List<bool> matriculaDuplicada = [];
   List<bool> matriculaRepetidaLocal = [];
   final List<Timer?> _debounceMatriculas = [];
 
-  // ====== Mascotas ======
+ 
   int numMascotas = 0;
-  List<List<TextEditingController>> mascotasControllers = []; // [nombre, tipo, raza, color, desc]
+  List<List<TextEditingController>> mascotasControllers = []; 
 
-  // ====== Objetos ======
+ 
   int numObjetos = 0;
-  List<List<TextEditingController>> objetosControllers = []; // [nombre, tipo, color, desc, valor? (opcional)]
+  List<List<TextEditingController>> objetosControllers = []; 
 
-  // ====== Contactos ======
+  
   final List<TextEditingController> contactoNombre =
       List.generate(3, (_) => TextEditingController());
   final List<TextEditingController> contactoTelefono =
@@ -74,7 +74,7 @@ class _NuevoClientePageState extends State<NuevoClientePage> {
 
   void mostrarNotificacionEscaneo(String mensaje) {
     showSimpleNotification(
-      Text("🔔 $mensaje"),
+      Text(" $mensaje"),
       background: Colors.blue,
       duration: const Duration(seconds: 4),
       trailing: const Icon(Icons.qr_code_scanner, color: Colors.white),
@@ -86,7 +86,7 @@ class _NuevoClientePageState extends State<NuevoClientePage> {
   void initState() {
     super.initState();
 
-    // Validación en vivo: cédula
+    
     cedulaController.addListener(() {
       _debounceCedula?.cancel();
       _debounceCedula = Timer(const Duration(milliseconds: 450), () async {
@@ -94,7 +94,7 @@ class _NuevoClientePageState extends State<NuevoClientePage> {
       });
     });
 
-    // Validación en vivo: teléfono
+   
     telefonoController.addListener(() {
       _debounceTelefono?.cancel();
       _debounceTelefono = Timer(const Duration(milliseconds: 450), () async {
@@ -202,7 +202,7 @@ class _NuevoClientePageState extends State<NuevoClientePage> {
     setState(() {});
   }
 
-  // ====== Validaciones locales ======
+ 
   String? _validaNombre(String? v) {
     final s = (v ?? '').trim();
     if (s.isEmpty) return 'Campo obligatorio';
@@ -247,7 +247,7 @@ class _NuevoClientePageState extends State<NuevoClientePage> {
     return null;
   }
 
-  // ====== Validaciones en vivo (Mongo) ======
+  
   Future<void> _checkCedulaDuplicate(String cedula) async {
     if (_validaCedula(cedula) != null) {
       setState(() => cedulaDuplicada = false);
@@ -319,7 +319,7 @@ class _NuevoClientePageState extends State<NuevoClientePage> {
       matriculaDuplicada.any((e) => e) ||
       matriculaRepetidaLocal.any((e) => e);
 
-  // ====== Guardar cliente ======
+ 
   Future<void> _guardarCliente() async {
     FocusScope.of(context).unfocus();
 
@@ -437,7 +437,7 @@ class _NuevoClientePageState extends State<NuevoClientePage> {
       final insertResult = await col.insertOne(cliente);
       final insertedId = insertResult.id as mongo.ObjectId?;
 
-      // Trasladar póliza si aplica
+      
       if (insertedId != null && widget.trasladarPolizaDesde != null) {
         final origen = widget.trasladarPolizaDesde!;
         await col.updateOne(
@@ -535,7 +535,7 @@ class _NuevoClientePageState extends State<NuevoClientePage> {
     }
   }
 
-  // ====== Seleccionar imagen ======
+  
   Future<void> _seleccionarImagen(int numero) async {
     final ced = cedulaController.text.trim();
 
@@ -580,7 +580,7 @@ class _NuevoClientePageState extends State<NuevoClientePage> {
     }
   }
 
-  // ====== Helpers UI ======
+  
   Widget _campoFijo({
     required TextEditingController controller,
     required String label,
@@ -644,7 +644,6 @@ class _NuevoClientePageState extends State<NuevoClientePage> {
     );
   }
 
-  // ====== UI principal ======
   @override
   Widget build(BuildContext context) {
     const preguntas = [
@@ -687,8 +686,6 @@ class _NuevoClientePageState extends State<NuevoClientePage> {
                     ),
                   ),
                   const SizedBox(height: 22),
-
-                  // ===== Datos personales =====
                   _card("Datos personales", [
                     _textLine(
                       nombreController,
@@ -768,7 +765,7 @@ class _NuevoClientePageState extends State<NuevoClientePage> {
 
                   const SizedBox(height: 20),
 
-                  // ===== Seguridad =====
+                  
                   _card("Seguridad de cuenta", [
                     DropdownButtonFormField<String>(
                       value: preguntaSeguridadSeleccionada,
@@ -791,7 +788,7 @@ class _NuevoClientePageState extends State<NuevoClientePage> {
 
                   const SizedBox(height: 20),
 
-                  // ===== Vehículos =====
+                  
                   _card("Vehículos del cliente", [
                     Row(
                       children: [
@@ -887,7 +884,7 @@ class _NuevoClientePageState extends State<NuevoClientePage> {
 
                   const SizedBox(height: 20),
 
-                  // ===== Mascotas =====
+  
                   _card("Mascotas", [
                     Row(
                       children: [
@@ -944,7 +941,7 @@ class _NuevoClientePageState extends State<NuevoClientePage> {
 
                   const SizedBox(height: 20),
 
-                  // ===== Objetos personales =====
+                
                   _card("Objetos personales", [
                     Row(
                       children: [
@@ -997,7 +994,7 @@ class _NuevoClientePageState extends State<NuevoClientePage> {
 
                   const SizedBox(height: 20),
 
-                  // ===== Contactos =====
+              
                   _card("Contactos alternativos", [
                     ...List.generate(3, (i) => Padding(
                           padding: const EdgeInsets.only(bottom: 8.0),
@@ -1034,7 +1031,6 @@ class _NuevoClientePageState extends State<NuevoClientePage> {
 
                   const SizedBox(height: 20),
 
-                  // ===== Imágenes =====
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [

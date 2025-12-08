@@ -37,7 +37,7 @@ class _VerSiniestrosPageState extends State<VerSiniestrosPage> {
     cargarSiniestros();
   }
 
-  // Función para verificar si un siniestro está cerrado
+  
   bool _estaCerrado(Map<String, dynamic>? siniestro) {
     return siniestro != null && 
            siniestro["estado"]?.toString().toLowerCase() == "cerrado";
@@ -61,10 +61,10 @@ class _VerSiniestrosPageState extends State<VerSiniestrosPage> {
     required String objetoIdHex,
     required String nuevoStatus,
   }) async {
-    // Si el siniestro está cerrado, no permitir cambios
+   
     if (_estaCerrado(siniestroSeleccionado)) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("❌ No se puede modificar un caso cerrado")),
+        const SnackBar(content: Text(" No se puede modificar un caso cerrado")),
       );
       return;
     }
@@ -117,10 +117,23 @@ class _VerSiniestrosPageState extends State<VerSiniestrosPage> {
     final doc = await objetos.findOne(
       mongo.where.id(mongo.ObjectId.parse(objetoIdHex)),
     );
+    
     if (doc != null) {
-      _objetoPorId[objetoIdHex] = Map<String, dynamic>.from(doc);
+      
+      final users = db.collection('users');
+      final user = await users.findOne(
+        mongo.where.eq('objetoId', mongo.ObjectId.parse(objetoIdHex)),
+      );
+      
+      final objetoConNombre = {
+        ...doc,
+        'nombreObjeto': user != null ? user["object"]?.toString() : null,
+      };
+      
+      _objetoPorId[objetoIdHex] = objetoConNombre;
+      return objetoConNombre;
     }
-    return doc;
+    return null;
   }
 
   Future<void> _openUrl(String url) async {
@@ -157,7 +170,7 @@ class _VerSiniestrosPageState extends State<VerSiniestrosPage> {
             (s["fecha"]?.toString().isNotEmpty ?? false))
         .toList();
 
-    // Ordenar para que los casos cerrados aparezcan al final
+    
     res.sort((a, b) {
       final aCerrado = _estaCerrado(a);
       final bCerrado = _estaCerrado(b);
@@ -188,7 +201,7 @@ class _VerSiniestrosPageState extends State<VerSiniestrosPage> {
       final col = db.collection('siniestros');
       final id = siniestroSeleccionado!["_id"];
 
-      // Actualizar el estado a "cerrado"
+     
       await col.updateOne(
         mongo.where.id(id),
         mongo.modify.set("estado", "cerrado"),
@@ -202,7 +215,7 @@ class _VerSiniestrosPageState extends State<VerSiniestrosPage> {
           final index = siniestros.indexWhere((s) => s["_id"] == id);
           if (index != -1) siniestros[index] = actualizado;
           
-          // Reordenar la lista
+          
           siniestros.sort((a, b) {
             final aCerrado = _estaCerrado(a);
             final bCerrado = _estaCerrado(b);
@@ -214,10 +227,10 @@ class _VerSiniestrosPageState extends State<VerSiniestrosPage> {
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("✅ Caso cerrado correctamente")),
+        const SnackBar(content: Text("Caso cerrado correctamente")),
       );
     } catch (e) {
-      print("❌ Error al cerrar caso: $e");
+      print(" Error al cerrar caso: $e");
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("Error al cerrar caso: $e")),
       );
@@ -225,10 +238,10 @@ class _VerSiniestrosPageState extends State<VerSiniestrosPage> {
   }
 
   Future<void> agregarSeguimiento() async {
-    // Verificar si el caso está cerrado
+    
     if (_estaCerrado(siniestroSeleccionado)) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("❌ No se pueden añadir seguimientos a un caso cerrado")),
+        const SnackBar(content: Text(" No se pueden añadir seguimientos a un caso cerrado")),
       );
       return;
     }
@@ -342,7 +355,7 @@ class _VerSiniestrosPageState extends State<VerSiniestrosPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text("📅 $fecha"),
+              Text(" $fecha"),
               if (ip.isNotEmpty) Text("IP: $ip"),
               if (mapsUrl.isNotEmpty)
                 Padding(
@@ -357,7 +370,7 @@ class _VerSiniestrosPageState extends State<VerSiniestrosPage> {
   }
 
   Widget _dropdownEstadoQR(Map<String, dynamic> sin) {
-    // Si el caso está cerrado, mostrar estado pero deshabilitado
+  
     if (_estaCerrado(sin)) {
       return FutureBuilder<String>(
         future: _ensureEstadoQRLoaded(sin),
@@ -481,6 +494,7 @@ class _VerSiniestrosPageState extends State<VerSiniestrosPage> {
         final modelo = (obj["modelo"] ?? "").toString();
         final anio = (obj["anio"] ?? "").toString();
         final color = (obj["color"] ?? "").toString();
+        final nombreObjeto = (obj["nombreObjeto"] ?? "").toString();
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -488,6 +502,10 @@ class _VerSiniestrosPageState extends State<VerSiniestrosPage> {
             const Text("Ficha del Objeto",
                 style: TextStyle(
                     fontWeight: FontWeight.bold, color: Color(0xFF4D82BC))),
+            
+            if (nombreObjeto.isNotEmpty)
+              Text("Nombre: $nombreObjeto",
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
             Text("Tipo: $tipo"),
             if (descripcion.isNotEmpty) Text("Descripción: $descripcion"),
             if (otroDetalle.isNotEmpty) Text("Detalle: $otroDetalle"),
@@ -570,11 +588,27 @@ class _VerSiniestrosPageState extends State<VerSiniestrosPage> {
                                           style: TextStyle(
                                               fontWeight: FontWeight.bold,
                                               color: cerrado ? Colors.grey : Colors.black)),
-                                      subtitle: Text(
-                                        (sin["descripcion"] ?? '').toString(),
-                                        maxLines: 2,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: TextStyle(color: cerrado ? Colors.grey : null),
+                                      subtitle: FutureBuilder<Map<String, dynamic>?>(
+                                        future: _leerObjeto(_objetoIdHex(sin["objeto_id"])),
+                                        builder: (context, snap) {
+                                          if (snap.connectionState == ConnectionState.waiting) {
+                                            return const Text("Cargando...");
+                                          }
+                                          final obj = snap.data;
+                                          final nombreObjeto = (obj?["nombreObjeto"] ?? "").toString();
+                                          final descripcion = (obj?["descripcion"] ?? sin["descripcion"] ?? '').toString();
+                                          
+                                          final displayText = nombreObjeto.isNotEmpty 
+                                              ? "$nombreObjeto"
+                                              : "$descripcion";
+                                          
+                                          return Text(
+                                            displayText,
+                                            maxLines: 2,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: TextStyle(color: cerrado ? Colors.grey : null),
+                                          );
+                                        },
                                       ),
                                       trailing: cerrado 
                                           ? const Icon(Icons.lock, color: Colors.grey, size: 16)
@@ -659,7 +693,7 @@ class _VerSiniestrosPageState extends State<VerSiniestrosPage> {
                                               color: Color(0xFF4D82BC))),
                                       _bloqueSeguimiento(siniestroSeleccionado!),
                                       const SizedBox(height: 20),
-                                      // Mostrar botones solo si el caso NO está cerrado
+                                    
                                       if (!_estaCerrado(siniestroSeleccionado))
                                         Row(
                                           children: [

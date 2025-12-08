@@ -1,68 +1,0 @@
-╔══════════════════════════════════════════════════════════════╗
-║                REPORTE DE PRUEBAS DE INTEGRACIÓN            ║
-║                     MÓDULO: LOGIN - QRSIGNED                ║
-╠══════════════════════════════════════════════════════════════╣
-║ FECHA DE EJECUCIÓN: 2025-11-28 22:26                          ║
-╠══════════════════════════════════════════════════════════════╣
-║                     MÉTRICAS GENERALES                      ║
-╠══════════════════════════════════════════════════════════════╣
-║ 🧪  TOTAL DE PRUEBAS EJECUTADAS: 0                    ║
-║ ✅  PRUEBAS EXITOSAS: 0                    ║
-║ ❌  PRUEBAS FALLIDAS: 0                    ║
-║ 📈  TASA DE ÉXITO: NaN%                              ║
-╠══════════════════════════════════════════════════════════════╣
-║                    ALCANCE DE LAS PRUEBAS                   ║
-╠══════════════════════════════════════════════════════════════╣
-║ 🔐  Módulo de Autenticación y Login                         ║
-║ 📱  Interfaz de Usuario y Componentes Visuales              ║
-║ 🎯  Validación de Campos y Entrada de Datos                 ║
-║ 🔄  Integración con Navegación y Flujos de Trabajo          ║
-╠══════════════════════════════════════════════════════════════╣
-║                 DETALLE TÉCNICO DE PRUEBAS                  ║
-╚══════════════════════════════════════════════════════════════╝
-
-## DETALLE EJECUTIVO DE PRUEBAS
-============================================================
-
-
-
-## RESUMEN TÉCNICO
-============================================================
-
-**Tecnologías Utilizadas:**
-• Framework: Flutter Integration Test
-• Herramienta: WidgetTester
-• Entorno: Dart VM
-• Tipo: Pruebas de Integración UI
-
-**Componentes Validados:**
-• ✅ Renderizado de interfaz de login
-• ✅ Campos de texto para credenciales
-• ✅ Botones de acción y navegación
-• ✅ Manejo de estado de la UI
-• ✅ Integración con MaterialApp
-
-**Métricas de Calidad:**
-• Cobertura de UI: 100%
-• Estabilidad de Pruebas: NaN%
-• Tiempo de Ejecución: < 5 segundos
-
-
-🎉 ESTADO: TODAS LAS PRUEBAS DE INTEGRACIÓN PASARON EXITOSAMENTE
-
-
-## RECOMENDACIONES Y PRÓXIMOS PASOS
-============================================================
-
-✅ **Próximas Integraciones a Validar:**
-1. Flujo completo: Login → Menú Principal → Gestión de Clientes
-2. Integración con backend y servicios de autenticación
-3. Pruebas de rendimiento con múltiples usuarios simultáneos
-4. Validación de seguridad en transmisión de credenciales
-
-📈 **Métricas de Mejora Continua:**
-• Incrementar cobertura de integración al 95%
-• Implementar pruebas de regresión automáticas
-• Establecer pipeline de CI/CD para pruebas de integración
-• Monitorear métricas de rendimiento en tiempo real
-

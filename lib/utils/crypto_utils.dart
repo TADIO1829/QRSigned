@@ -6,7 +6,7 @@ class CryptoUtils {
   static final _encrypter = encrypt.Encrypter(encrypt.AES(_key, mode: encrypt.AESMode.cbc));
 
   static String encryptText(String plainText) {
-    // ✅ MANEJAR TEXTO VACÍO
+    
     if (plainText.isEmpty) {
       return '';
     }
@@ -15,7 +15,7 @@ class CryptoUtils {
   }
 
   static String decryptText(String encryptedText) {
-    // ✅ MANEJAR TEXTO VACÍO
+    
     if (encryptedText.isEmpty) {
       return '';
     }

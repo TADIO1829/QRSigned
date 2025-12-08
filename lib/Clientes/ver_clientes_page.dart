@@ -14,7 +14,7 @@ import 'package:overlay_support/overlay_support.dart';
 
 void mostrarNotificacionEscaneo(String mensaje) {
   showSimpleNotification(
-    Text("🔔 $mensaje"),
+    Text(" $mensaje"),
     background: Colors.blue,
     duration: const Duration(seconds: 4),
     trailing: const Icon(Icons.qr_code_scanner, color: Colors.white),
@@ -363,7 +363,7 @@ class _VerClientesPageState extends State<VerClientesPage> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.end,
                           children: [
-                            // 🔥 SOLO MOSTRAR BOTÓN EDITAR SI ES ADMIN
+                            
                             if (UsuarioGlobal.esAdmin) ...[
                               OutlinedButton.icon(
                                 icon: const Icon(Icons.edit,

@@ -70,8 +70,25 @@ class _NuevoSiniestroPageState extends State<NuevoSiniestroPage> {
     final col = db.collection("objetos");
     final res = await col.find(mongo.where.eq("clienteId", clienteSeleccionado!["_id"])).toList();
     
+    
+    final usersCol = db.collection("users");
+    final objetosConNombre = <Map<String, dynamic>>[];
+    
+    for (var obj in res) {
+      final user = await usersCol.findOne(
+        mongo.where.eq("objetoId", obj["_id"])
+      );
+      
+      final objetoConNombre = {
+        ...obj,
+        'nombreObjeto': user != null ? user["object"]?.toString() : null,
+      };
+      
+      objetosConNombre.add(objetoConNombre);
+    }
+    
     setState(() {
-      objetos = res.cast<Map<String, dynamic>>();
+      objetos = objetosConNombre;
       objetoSeleccionado = objetos.isNotEmpty ? objetos.first : null;
     });
   }
@@ -133,6 +150,7 @@ class _NuevoSiniestroPageState extends State<NuevoSiniestroPage> {
           }
         ],
         "escaneos": [],
+        "nombre_objeto": objetoSeleccionado!["nombreObjeto"] ?? "",
         "createdAt": DateTime.now().toIso8601String(),
         "updatedAt": DateTime.now().toIso8601String(),
       };
@@ -195,8 +213,14 @@ class _NuevoSiniestroPageState extends State<NuevoSiniestroPage> {
     final anio = (objetoSeleccionado!["anio"] ?? "").toString();
     final color = (objetoSeleccionado!["color"] ?? "").toString();
     final otroDetalle = (objetoSeleccionado!["otroDetalle"] ?? "").toString();
+    final nombreObjeto = (objetoSeleccionado!["nombreObjeto"] ?? "").toString();
 
     List<Widget> detalles = [
+      
+      if (nombreObjeto.isNotEmpty)
+        Text("Nombre: $nombreObjeto", 
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+      
       Text("Tipo: $tipo", style: const TextStyle(fontWeight: FontWeight.bold)),
       if (descripcion.isNotEmpty) Text("Descripción: $descripcion"),
     ];
@@ -346,9 +370,18 @@ class _NuevoSiniestroPageState extends State<NuevoSiniestroPage> {
                                 DropdownButtonFormField<Map<String, dynamic>>(
                                   value: objetoSeleccionado,
                                   items: objetos.map((obj) {
+                                    final descripcion = (obj["descripcion"] ?? "").toString();
+                                    final tipo = (obj["tipo"] ?? "").toString();
+                                    final nombreObjeto = (obj["nombreObjeto"] ?? "").toString();
+                                    
+                                    
+                                    final displayText = nombreObjeto.isNotEmpty 
+                                        ? "$nombreObjeto ($tipo)"
+                                        : "$descripcion ($tipo)";
+                                    
                                     return DropdownMenuItem<Map<String, dynamic>>(
                                       value: obj,
-                                      child: Text("${obj["descripcion"]} (${obj["tipo"]})"),
+                                      child: Text(displayText),
                                     );
                                   }).toList(),
                                   onChanged: (val) => setState(() => objetoSeleccionado = val),

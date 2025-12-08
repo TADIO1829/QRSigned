@@ -180,18 +180,18 @@ class _TrasladarPolizaPageState extends State<TrasladarPolizaPage> {
 
       if (poliza == null || poliza.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("⚠️ El cliente origen no tiene póliza.")),
+          const SnackBar(content: Text(" El cliente origen no tiene póliza.")),
         );
         return;
       }
 
-      // Asignar póliza al destino
+      
       await col.updateOne(
         mongo.where.id(destino['_id']),
         mongo.modify.set("poliza", poliza),
       );
 
-      // Acción sobre el origen
+      
       if (confirm == 0) {
         await col.deleteOne(mongo.where.id(clienteOrigen['_id']));
       } else if (confirm == 1) {
@@ -232,7 +232,7 @@ class _TrasladarPolizaPageState extends State<TrasladarPolizaPage> {
       }
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("✅ Póliza trasladada exitosamente.")),
+        const SnackBar(content: Text("Póliza trasladada exitosamente.")),
       );
       Navigator.pop(context);
     } catch (e) {

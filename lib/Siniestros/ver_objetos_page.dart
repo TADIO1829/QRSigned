@@ -21,7 +21,7 @@ class _VerObjetosPageState extends State<VerObjetosPage> {
   @override
   void initState() {
     super.initState();
-    print("🚀 INIT VerObjetosPage");
+    print(" INIT VerObjetosPage");
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _cargarDatos();
     });
@@ -32,13 +32,13 @@ class _VerObjetosPageState extends State<VerObjetosPage> {
 
   @override
   void dispose() {
-    print("🔚 DISPOSE VerObjetosPage");
+    print(" DISPOSE VerObjetosPage");
     _autoRefreshTimer?.cancel();
     super.dispose();
   }
 
   Future<void> _cargarDatos({bool auto = false}) async {
-    print("📥 _cargarDatos iniciado, auto: $auto");
+    print(" _cargarDatos iniciado, auto: $auto");
     
     if (!auto && mounted) {
       setState(() => loading = true);
@@ -59,20 +59,20 @@ class _VerObjetosPageState extends State<VerObjetosPage> {
         query.sortBy('_id', descending: true)
       ).toList();
 
-      print("📊 Total de usuarios/objetos cargados: ${listaUsers.length}");
+      print(" Total de usuarios/objetos cargados: ${listaUsers.length}");
 
       if (mounted) {
         setState(() {
           users = listaUsers;
           loading = false;
         });
-        print("✅ Estado actualizado correctamente");
+        print(" Estado actualizado correctamente");
       } else {
-        print("⚠️ Widget no montado, no se actualiza estado");
+        print(" Widget no montado, no se actualiza estado");
       }
     } catch (e, stack) {
-      print("❌ Error crítico en _cargarDatos: $e");
-      print("📝 Stack: $stack");
+      print(" Error crítico en _cargarDatos: $e");
+      print(" Stack: $stack");
       if (mounted) {
         setState(() => loading = false);
         _mostrarError("Error cargando datos: $e");
@@ -94,16 +94,16 @@ class _VerObjetosPageState extends State<VerObjetosPage> {
       }
       
       final url = "http://localhost:3000/qr/form/$qrToken";
-      print("✅ URL QR generada: $url");
+      print(" URL QR generada: $url");
       return url;
     } catch (e) {
-      print("❌ Error en _generarUrlQR: $e");
+      print("Error en _generarUrlQR: $e");
       rethrow;
     }
   }
 
   void _mostrarQR(Map<String, dynamic> user) {
-    print("🎯 _mostrarQR iniciado para: ${user['name']}");
+    print("_mostrarQR iniciado para: ${user['name']}");
     
     try {
       final name = user["name"]?.toString() ?? "Sin nombre";
@@ -176,7 +176,7 @@ class _VerObjetosPageState extends State<VerObjetosPage> {
                 const SizedBox(height: 12),
                 
                 const Text(
-                  "📱 Escanea este código QR",
+                  " Escanea este código QR",
                   style: TextStyle(
                     fontSize: 12,
                     color: Colors.green,
@@ -197,8 +197,8 @@ class _VerObjetosPageState extends State<VerObjetosPage> {
       );
       
     } catch (e, stack) {
-      print("💥 ERROR en _mostrarQR: $e");
-      print("📝 Stack: $stack");
+      print(" ERROR en _mostrarQR: $e");
+      print(" Stack: $stack");
       _mostrarError("Error al mostrar QR: ${e.toString()}");
     }
   }
@@ -287,7 +287,7 @@ class _VerObjetosPageState extends State<VerObjetosPage> {
   }
 
   void _mostrarError(String mensaje) {
-    print("🛑 Mostrando error: $mensaje");
+    print(" Mostrando error: $mensaje");
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(mensaje),
@@ -298,7 +298,7 @@ class _VerObjetosPageState extends State<VerObjetosPage> {
   }
 
   void _mostrarInfoUser(Map<String, dynamic> user) {
-    print("ℹ️ _mostrarInfoUser para: ${user['name']}");
+    print("ℹ _mostrarInfoUser para: ${user['name']}");
     
     try {
       final name = user["name"]?.toString() ?? "Sin nombre";
@@ -313,7 +313,7 @@ class _VerObjetosPageState extends State<VerObjetosPage> {
       showDialog(
         context: context,
         builder: (context) => AlertDialog(
-          title: const Text("📋 Información Completa"),
+          title: const Text(" Información Completa"),
           content: Container(
             width: double.maxFinite,
             child: Column(
@@ -356,7 +356,7 @@ class _VerObjetosPageState extends State<VerObjetosPage> {
         ),
       );
     } catch (e) {
-      print("❌ Error en _mostrarInfoUser: $e");
+      print(" Error en _mostrarInfoUser: $e");
       _mostrarError("Error al mostrar información: $e");
     }
   }
@@ -400,7 +400,7 @@ class _VerObjetosPageState extends State<VerObjetosPage> {
 
   @override
   Widget build(BuildContext context) {
-    print("🔄 BUILD ejecutado, loading: $loading, users: ${users.length}");
+    print(" BUILD ejecutado, loading: $loading, users: ${users.length}");
     
     const fondo = Color(0xFF23272F);
     const azul = Color(0xFF4D82BC);
@@ -444,7 +444,7 @@ class _VerObjetosPageState extends State<VerObjetosPage> {
           final user = users[i];
           final name = user["name"]?.toString() ?? "Sin nombre";
 
-          print("📦 Construyendo item $i: $name");
+          print(" Construyendo item $i: $name");
 
           return Card(
             elevation: 6,
@@ -470,7 +470,7 @@ class _VerObjetosPageState extends State<VerObjetosPage> {
                       Expanded(
                         child: ElevatedButton.icon(
                           onPressed: () {
-                            print("🔄 Botón Info presionado");
+                            print(" Botón Info presionado");
                             _mostrarInfoUser(user);
                           },
                           icon: const Icon(Icons.visibility),
@@ -485,7 +485,7 @@ class _VerObjetosPageState extends State<VerObjetosPage> {
                       Expanded(
                         child: ElevatedButton.icon(
                           onPressed: () {
-                            print("🔄 Botón QR presionado");
+                            print(" Botón QR presionado");
                             _mostrarQR(user);
                           },
                           icon: const Icon(Icons.qr_code_2),

@@ -1,4 +1,3 @@
-
 import 'dart:async';
 import 'package:mongo_dart/mongo_dart.dart' as mongo;
 import '../db/mongo_connection.dart';
@@ -10,8 +9,9 @@ class PollingService {
   static DateTime? _lastCheck;
 
   
+  static List<String> _pendingNotifications = [];
+
   static void startPolling({int interval = 10}) {
-    
     _lastCheck = DateTime.now();
 
     _timer?.cancel();
@@ -19,37 +19,36 @@ class PollingService {
       await _checkForUpdates();
     });
 
-    print("🟢 Polling iniciado (intervalo: ${interval}s)");
+    print(" Polling iniciado (intervalo: ${interval}s)");
   }
 
-  
   static void stopPolling() {
     _timer?.cancel();
     _timer = null;
-    print("🔴 Polling detenido");
+    print(" Polling detenido");
   }
 
-  
   static Future<void> _checkForUpdates() async {
     try {
       final db = await MongoDatabase.connect();
       final siniestrosCol = db.collection('siniestros');
       final clientesCol = db.collection('clientes');
 
-      
       final query = mongo.where.gte('updatedAt', _lastCheck!.add(Duration(milliseconds: 1)));
       final results = await siniestrosCol.find(query).toList();
 
-      print("🕓 Verificando actualizaciones desde $_lastCheck → encontrados: ${results.length}");
+      print(" Verificando actualizaciones desde $_lastCheck → encontrados: ${results.length}");
 
       if (results.isNotEmpty) {
+       
+        _pendingNotifications.clear();
+
         for (final sin in results) {
           final tipo = sin['tipo'] ?? 'Siniestro';
           final clienteId = sin['cliente_id'];
           String nombre = "Cliente desconocido";
           String cedula = "";
 
-         
           if (clienteId != null) {
             mongo.ObjectId? objectId;
 
@@ -68,7 +67,7 @@ class PollingService {
             }
 
             if (objectId == null) {
-              print("⚠️ No se pudo obtener ObjectId válido para cliente_id: $clienteId");
+              print("No se pudo obtener ObjectId válido para cliente_id: $clienteId");
               continue;
             }
 
@@ -84,28 +83,37 @@ class PollingService {
                   cedula = "[no disponible]";
                 }
               } catch (e) {
-                print("⚠️ Error desencriptando cédula de $nombre: $e");
+                print("Error desencriptando cédula de $nombre: $e");
                 cedula = "[dato inválido]";
               }
             }
           }
 
-          
           final detalle = (cedula.isNotEmpty && cedula != "[dato inválido]")
-              ? "📢 $tipo de $nombre (C.I: $cedula) actualizado"
-              : "📢 $tipo de $nombre actualizado";
+              ? " $tipo de $nombre (C.I: $cedula) actualizado"
+              : " $tipo de $nombre actualizado";
 
-          print("🔔 Mostrando notificación: $detalle");
-          mostrarNotificacionEscaneo(detalle);
+          
+          _pendingNotifications.add(detalle);
+        }
+
+       
+        if (_pendingNotifications.isNotEmpty) {
+          if (_pendingNotifications.length == 1) {
+            
+            mostrarNotificacionEscaneo(_pendingNotifications[0]);
+          } else {
+            
+            mostrarNotificacionEscaneo("${_pendingNotifications.length} siniestros actualizados");
+          }
         }
       } else {
-        print("⏳ No hay actualizaciones nuevas.");
+        print(" No hay actualizaciones nuevas.");
       }
 
-     
       _lastCheck = DateTime.now();
     } catch (e) {
-      print("❌ Error en polling: $e");
+      print(" Error en polling: $e");
     }
   }
 }
