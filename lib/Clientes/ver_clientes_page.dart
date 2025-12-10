@@ -48,6 +48,19 @@ class _VerClientesPageState extends State<VerClientesPage> {
     }
   }
 
+  String _formatearPoliza(dynamic valorPoliza) {
+    if (valorPoliza == null) return '—';
+    final String polizaStr = valorPoliza.toString();
+    if (polizaStr == '1' || polizaStr.toLowerCase().contains('basica')) {
+      return 'Básica';
+    } else if (polizaStr == '3' || polizaStr.toLowerCase().contains('premium')) {
+      return 'Premium';
+    } else if (polizaStr == '5') {
+      return 'Premium';
+    }
+    return polizaStr;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -363,7 +376,6 @@ class _VerClientesPageState extends State<VerClientesPage> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.end,
                           children: [
-                            
                             if (UsuarioGlobal.esAdmin) ...[
                               OutlinedButton.icon(
                                 icon: const Icon(Icons.edit,
@@ -455,7 +467,7 @@ class _VerClientesPageState extends State<VerClientesPage> {
         _row("Cédula:", _BlurRevealText(cedula.isEmpty ? "—" : cedula)),
         _row("Dirección:", _BlurRevealText(direccion.isEmpty ? "—" : direccion)),
         _row("Teléfono:", _BlurRevealText(telefono.isEmpty ? "—" : telefono)),
-        _row("Póliza:", Text(cliente['poliza']?.toString() ?? '—')),
+        _row("Póliza:", Text(_formatearPoliza(cliente['poliza'] ?? '—'))),
         const SizedBox(height: 14),
         if (ruta1.isNotEmpty || ruta2.isNotEmpty) ...[
           _titulo("Imágenes del cliente"),
@@ -595,7 +607,7 @@ class _VerClientesPageState extends State<VerClientesPage> {
           const SizedBox(width: 6),
           Expanded(child: valor),
         ],
-      ),
+      )
     );
   }
 }

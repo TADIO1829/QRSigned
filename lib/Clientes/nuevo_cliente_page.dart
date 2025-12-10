@@ -753,9 +753,8 @@ class _NuevoClientePageState extends State<NuevoClientePage> {
                       value: polizaSeleccionada,
                       items: const [
                         DropdownMenuItem(value: null, child: Text("Selecciona una póliza")),
-                        DropdownMenuItem(value: "1", child: Text("1 año")),
-                        DropdownMenuItem(value: "3", child: Text("3 años")),
-                        DropdownMenuItem(value: "5", child: Text("5 años")),
+                        DropdownMenuItem(value: "Básica", child: Text("Básica")),
+                        DropdownMenuItem(value: "Premium", child: Text("Premium")),
                       ],
                       decoration: const InputDecoration(labelText: "Póliza"),
                       validator: (v) => v == null ? "Selecciona una póliza" : null,

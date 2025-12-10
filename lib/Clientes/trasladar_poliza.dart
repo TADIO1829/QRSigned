@@ -32,10 +32,32 @@ class _TrasladarPolizaPageState extends State<TrasladarPolizaPage> {
     }
   }
 
+  String _formatearPolizaParaMostrar(dynamic poliza) {
+    if (poliza == null) return 'Sin póliza';
+    final polizaStr = poliza.toString();
+    if (polizaStr == '1' || polizaStr.toLowerCase().contains('basica')) {
+      return 'Básica';
+    } else if (polizaStr == '3' || polizaStr == '5' || polizaStr.toLowerCase().contains('premium')) {
+      return 'Premium';
+    }
+    return polizaStr;
+  }
+
+  String _normalizarPolizaParaGuardar(String poliza) {
+    if (poliza.toLowerCase().contains('basica')) {
+      return 'Básica';
+    } else if (poliza.toLowerCase().contains('premium')) {
+      return 'Premium';
+    }
+    return poliza;
+  }
+
   @override
   Widget build(BuildContext context) {
     const azul = Color(0xFF23272F);
     const azulClaro = Color(0xFF4D82BC);
+
+    final polizaOrigen = _formatearPolizaParaMostrar(clienteOrigen['poliza']);
 
     return Scaffold(
       backgroundColor: azul,
@@ -77,6 +99,11 @@ class _TrasladarPolizaPageState extends State<TrasladarPolizaPage> {
               const SizedBox(height: 6),
               Text(
                 "Cédula: ${CryptoUtils.decryptText(clienteOrigen['cedula'] ?? '')}",
+                style: const TextStyle(fontSize: 14, color: Colors.black54),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                "Póliza actual: $polizaOrigen",
                 style: const TextStyle(fontSize: 14, color: Colors.black54),
               ),
               const SizedBox(height: 18),
@@ -145,7 +172,8 @@ class _TrasladarPolizaPageState extends State<TrasladarPolizaPage> {
   }
 
   Future<void> _confirmarTraslado(Map<String, dynamic> destino) async {
-    const azulClaro = Color(0xFF4D82BC);
+    final polizaOrigen = clienteOrigen['poliza'];
+    final polizaNormalizada = _normalizarPolizaParaGuardar(polizaOrigen?.toString() ?? '');
 
     final confirm = await showDialog<int>(
       context: context,
@@ -176,22 +204,19 @@ class _TrasladarPolizaPageState extends State<TrasladarPolizaPage> {
     try {
       final db = await MongoDatabase.connect();
       final col = db.collection("clientes");
-      final poliza = clienteOrigen['poliza'];
 
-      if (poliza == null || poliza.isEmpty) {
+      if (polizaOrigen == null || polizaOrigen.toString().isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text(" El cliente origen no tiene póliza.")),
         );
         return;
       }
 
-      
       await col.updateOne(
         mongo.where.id(destino['_id']),
-        mongo.modify.set("poliza", poliza),
+        mongo.modify.set("poliza", polizaNormalizada),
       );
 
-      
       if (confirm == 0) {
         await col.deleteOne(mongo.where.id(clienteOrigen['_id']));
       } else if (confirm == 1) {

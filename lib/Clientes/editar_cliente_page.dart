@@ -23,18 +23,13 @@ class _EditarClientePageState extends State<EditarClientePage> {
   bool loading = false;
   String error = "";
 
-  
   List<List<TextEditingController>> carrosControllers = [];
-
- 
   List<Map<String, TextEditingController>> mascotasControllers = [];
   List<Map<String, TextEditingController>> objetosControllers = [];
 
-  
   List<TextEditingController> contactoNombre = List.generate(3, (_) => TextEditingController());
   List<TextEditingController> contactoTelefono = List.generate(3, (_) => TextEditingController());
   List<TextEditingController> contactoRelacion = List.generate(3, (_) => TextEditingController());
-
 
   String safeDecrypt(String? text) {
     if (text == null || text.isEmpty) return '';
@@ -45,26 +40,9 @@ class _EditarClientePageState extends State<EditarClientePage> {
     }
   }
 
-  
   String safeEncrypt(String text) {
     if (text.isEmpty) return '';
-    
     return CryptoUtils.encryptText(text);
-  }
-
-  
-  String? _mapearPoliza(String? poliza) {
-    if (poliza == null) return null;
-    
-    if (poliza == "1" || poliza == "3" || poliza == "5") {
-      return "Básica";
-    }
-    
-    if (poliza == "Básica" || poliza == "Premium") {
-      return poliza;
-    }
-    
-    return null; 
   }
 
   @override
@@ -77,10 +55,15 @@ class _EditarClientePageState extends State<EditarClientePage> {
     direccionController.text = safeDecrypt(cli['direccion']);
     telefonoController.text = safeDecrypt(cli['telefono']);
     
-    
-    polizaSeleccionada = _mapearPoliza(cli['poliza']);
+    final polizaOriginal = cli['poliza']?.toString() ?? '';
+    if (polizaOriginal == '1' || polizaOriginal.toLowerCase().contains('basica')) {
+      polizaSeleccionada = "Básica";
+    } else if (polizaOriginal == '3' || polizaOriginal == '5' || polizaOriginal.toLowerCase().contains('premium')) {
+      polizaSeleccionada = "Premium";
+    } else if (polizaOriginal == "Básica" || polizaOriginal == "Premium") {
+      polizaSeleccionada = polizaOriginal;
+    }
 
-    
     final mats = (cli['matriculas'] as List?) ?? [];
     carrosControllers = mats.map((m) {
       return [
@@ -92,7 +75,6 @@ class _EditarClientePageState extends State<EditarClientePage> {
       ];
     }).toList();
 
-    
     final mascotas = (cli['mascotas'] as List?) ?? [];
     mascotasControllers = mascotas.map((m) {
       return {
@@ -104,7 +86,6 @@ class _EditarClientePageState extends State<EditarClientePage> {
       };
     }).toList();
 
-   
     final objetos = (cli['objetos'] as List?) ?? [];
     objetosControllers = objetos.map((o) {
       return {
@@ -115,7 +96,6 @@ class _EditarClientePageState extends State<EditarClientePage> {
       };
     }).toList();
 
-    
     final contactos = (cli['contactos'] as List?) ?? [];
     for (int i = 0; i < 3; i++) {
       if (i < contactos.length) {
@@ -227,22 +207,7 @@ class _EditarClientePageState extends State<EditarClientePage> {
       );
 
       if (context.mounted) {
-        showDialog(
-          context: context,
-          builder: (_) => AlertDialog(
-            title: const Text("Éxito"),
-            content: const Text("Cliente actualizado correctamente."),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                  Navigator.pop(context);
-                },
-                child: const Text("OK"),
-              )
-            ],
-          ),
-        );
+        Navigator.pop(context, true);
       }
     } catch (e) {
       setState(() => error = "Error al actualizar cliente: $e");
@@ -250,8 +215,6 @@ class _EditarClientePageState extends State<EditarClientePage> {
       setState(() => loading = false);
     }
   }
-
-  
 
   Future<void> _eliminarClienteCompletamente() async {
     final confirmar = await showDialog<bool>(
@@ -289,7 +252,6 @@ class _EditarClientePageState extends State<EditarClientePage> {
       final db = await MongoDatabase.connect();
       final clienteId = widget.cliente['_id'];
       
-     
       final colObjetos = db.collection('objetos');
       final objetosCliente = await colObjetos
           .find(mongo.where.eq('clienteId', clienteId))
@@ -297,7 +259,6 @@ class _EditarClientePageState extends State<EditarClientePage> {
       
       final objetoIds = objetosCliente.map((obj) => obj['_id']).toList();
 
-      
       final colUsers = db.collection('users');
       for (var objetoId in objetoIds) {
         await colUsers.deleteMany(
@@ -305,18 +266,15 @@ class _EditarClientePageState extends State<EditarClientePage> {
         );
       }
 
-   
       final colSiniestros = db.collection('siniestros');
       await colSiniestros.deleteMany(
         mongo.where.eq('cliente_id', clienteId)
       );
 
-    
       await colObjetos.deleteMany(
         mongo.where.eq('clienteId', clienteId)
       );
 
-      
       final colClientes = db.collection('clientes');
       await colClientes.deleteOne(mongo.where.id(clienteId));
 
@@ -412,7 +370,6 @@ class _EditarClientePageState extends State<EditarClientePage> {
                       ),
                       const SizedBox(height: 20),
 
-                     
                       _card("Datos personales 👤", azulClaro, [
                         _input(nombreController, "Nombre"),
                         _input(cedulaController, "Cédula"),
@@ -433,7 +390,6 @@ class _EditarClientePageState extends State<EditarClientePage> {
 
                       const SizedBox(height: 20),
 
-                      
                       _card("Vehículos 🚗", azulClaro, [
                         ...List.generate(carrosControllers.length, (i) {
                           final c = carrosControllers[i];
@@ -472,7 +428,6 @@ class _EditarClientePageState extends State<EditarClientePage> {
 
                       const SizedBox(height: 20),
 
-                      
                       _card("Mascotas 🐾", azulClaro, [
                         ...List.generate(mascotasControllers.length, (i) {
                           final m = mascotasControllers[i];
@@ -510,7 +465,6 @@ class _EditarClientePageState extends State<EditarClientePage> {
 
                       const SizedBox(height: 20),
 
-                      
                       _card("Objetos personales 📦", azulClaro, [
                         ...List.generate(objetosControllers.length, (i) {
                           final o = objetosControllers[i];
@@ -547,7 +501,6 @@ class _EditarClientePageState extends State<EditarClientePage> {
 
                       const SizedBox(height: 20),
 
-                     
                       _card("Contactos alternativos ☎️", azulClaro, [
                         ...List.generate(3, (i) {
                           return Row(
