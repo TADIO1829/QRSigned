@@ -252,31 +252,32 @@ class _EditarClientePageState extends State<EditarClientePage> {
       final db = await MongoDatabase.connect();
       final clienteId = widget.cliente['_id'];
       
-      final colObjetos = db.collection('objetos');
-      final objetosCliente = await colObjetos
-          .find(mongo.where.eq('clienteId', clienteId))
-          .toList();
-      
-      final objetoIds = objetosCliente.map((obj) => obj['_id']).toList();
+      final mongo.ObjectId clienteObjectId;
+      if (clienteId is mongo.ObjectId) {
+        clienteObjectId = clienteId;
+      } else if (clienteId is String) {
+        clienteObjectId = mongo.ObjectId.parse(clienteId);
+      } else {
+        throw Exception("ID de cliente no válido");
+      }
 
       final colUsers = db.collection('users');
-      for (var objetoId in objetoIds) {
-        await colUsers.deleteMany(
-          mongo.where.eq('objetoId', objetoId)
-        );
-      }
+      await colUsers.deleteMany(
+        mongo.where.eq('clienteId', clienteObjectId)
+      );
+
+      final colObjetos = db.collection('objetos');
+      await colObjetos.deleteMany(
+        mongo.where.eq('clienteId', clienteObjectId)
+      );
 
       final colSiniestros = db.collection('siniestros');
       await colSiniestros.deleteMany(
-        mongo.where.eq('cliente_id', clienteId)
-      );
-
-      await colObjetos.deleteMany(
-        mongo.where.eq('clienteId', clienteId)
+        mongo.where.eq('cliente_id', clienteObjectId)
       );
 
       final colClientes = db.collection('clientes');
-      await colClientes.deleteOne(mongo.where.id(clienteId));
+      await colClientes.deleteOne(mongo.where.id(clienteObjectId));
 
       if (context.mounted) {
         showDialog(
@@ -289,7 +290,7 @@ class _EditarClientePageState extends State<EditarClientePage> {
               TextButton(
                 onPressed: () {
                   Navigator.pop(context); 
-                  Navigator.pop(context); 
+                  Navigator.pop(context, true);
                 },
                 child: const Text("OK"),
               )
