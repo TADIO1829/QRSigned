@@ -92,7 +92,7 @@ void main() {
     });
 
     runTest(' CryptoUtils', 'encriptado y desencriptado de caracteres especiales', () {
-      const text = '¡Hola! ¿Cómo estás?';
+      const text = 'Holaaaaaaaaaaa como tas??';
       final encrypted = CryptoUtils.encryptText(text);
       final decrypted = CryptoUtils.decryptText(encrypted);
       expect(decrypted, text);

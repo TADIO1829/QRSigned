@@ -27,7 +27,7 @@ class _LoginPageState extends State<LoginPage> {
     final email = userController.text.trim().toLowerCase();
     final password = passController.text.trim();
 
-    if (email == "admin@admin.com" && password == "made") {
+    if (email == "admin@admin.com" && password == "QRSIGNED") {
       UsuarioGlobal.setUsuario(tipoUsuario: "admin", nombreUsuario: "Esthefany");
       await showDialog(
         context: context,
@@ -48,7 +48,7 @@ class _LoginPageState extends State<LoginPage> {
           ],
         ),
       );
-    } else if (email == "usuario@gmail.com" && password == "made") {
+    } else if (email == "usuario@gmail.com" && password == "QRSIGNED") {
       UsuarioGlobal.setUsuario(tipoUsuario: "usuario", nombreUsuario: "Tadeo");
       await showDialog(
         context: context,
